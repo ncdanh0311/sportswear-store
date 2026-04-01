@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "423644867047",
+    "project_id": "dkpl-sports",
+    "storage_bucket": "dkpl-sports.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:423644867047:android:12188b8a1f7dd8aeeff542",
+        "android_client_info": {
+          "package_name": "com.example.dkpl_sports"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFTMGszKfMlxLlMm9p33z4ydWhY2vYn5o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:423644867047:android:55b42ce92961a62eeff542",
+        "android_client_info": {
+          "package_name": "com.example.dkpl_sports_admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFTMGszKfMlxLlMm9p33z4ydWhY2vYn5o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
