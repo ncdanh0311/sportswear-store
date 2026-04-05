@@ -6,10 +6,13 @@ import 'package:dkpl_sports_admin/core/widgets/dkpl_card.dart';
 import 'package:dkpl_sports_admin/core/widgets/dkpl_button.dart';
 import 'package:dkpl_sports_admin/core/widgets/product_widgets.dart';
 import 'package:dkpl_sports_admin/core/constants/app_colors.dart';
+import 'package:dkpl_sports_admin/core/constants/role_permissions.dart';
 import 'package:dkpl_sports_admin/screens/auth/login_screen.dart';
 
 class AddStaffScreen extends StatefulWidget {
-  const AddStaffScreen({super.key});
+  const AddStaffScreen({super.key, this.bootstrapMode = false});
+
+  final bool bootstrapMode;
 
   @override
   State<AddStaffScreen> createState() => _AddStaffScreenState();
@@ -32,13 +35,14 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
   bool _isLoading = false;
 
   final Map<String, String> _rolesMap = {
-    'Chăm sóc khách hàng (CSKH)': 'cskh',
-    'Quản lý kho (Storage)': 'storage',
-    'Content / Marketing': 'content',
+    'Nhân viên bán hàng (Sales)': 'sales',
+    'Nhân viên kho (Warehouse)': 'warehouse',
+    'Nhân viên kế toán (Accounting)': 'accounting',
+    'Quản lý (Manager)': 'manager',
     'Quản trị viên (Admin)': 'admin',
   };
 
-  String _selectedRoleLabel = 'Chăm sóc khách hàng (CSKH)';
+  String _selectedRoleLabel = 'Nhân viên bán hàng (Sales)';
 
   // Hàm chọn ngày sinh
   Future<void> _pickDateOfBirth() async {
@@ -91,7 +95,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
     }
 
     setState(() => _isLoading = true);
-    String roleValue = _rolesMap[_selectedRoleLabel] ?? 'cskh';
+    String roleValue = widget.bootstrapMode ? 'admin' : (_rolesMap[_selectedRoleLabel] ?? 'sales');
 
     final result = await AuthService.instance.register(
       fullName: _nameCtrl.text,
@@ -113,14 +117,18 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
           content: Text('Tạo nhân sự thành công!', style: TextStyle(color: Colors.greenAccent)),
         ),
       );
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Hệ thống đã chuyển phiên bản, vui lòng đăng nhập lại.')),
-      );
+      if (widget.bootstrapMode) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tạo Admin gốc thành công, vui lòng đăng nhập.')),
+        );
+      } else {
+        Navigator.pop(context, true);
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -132,6 +140,21 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canManageStaff =
+        RolePermissions.canManageStaff(AuthService.instance.currentUser?.role);
+
+    if (!canManageStaff && !widget.bootstrapMode) {
+      return BaseBackground(
+        appBar: AppBar(title: const Text('Thêm Nhân Sự Mới')),
+        child: const Center(
+          child: Text(
+            'Bạn không có quyền tạo tài khoản nhân sự.',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
+      );
+    }
+
     return BaseBackground(
       appBar: AppBar(title: const Text('Thêm Nhân Sự Mới')),
       child: _isLoading
@@ -209,9 +232,14 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                         const SizedBox(height: 16),
                         ProductDropdown(
                           label: "Chức vụ (Role)",
-                          value: _selectedRoleLabel,
-                          items: _rolesMap.keys.toList(),
+                          value: widget.bootstrapMode
+                              ? 'Quản trị viên (Admin)'
+                              : _selectedRoleLabel,
+                          items: widget.bootstrapMode
+                              ? const ['Quản trị viên (Admin)']
+                              : _rolesMap.keys.toList(),
                           onChanged: (val) {
+                            if (widget.bootstrapMode) return;
                             if (val != null) setState(() => _selectedRoleLabel = val);
                           },
                         ),

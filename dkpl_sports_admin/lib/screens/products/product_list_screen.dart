@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:dkpl_sports_admin/services/product_service.dart';
+import 'package:dkpl_sports_admin/services/auth_service.dart';
 import 'package:dkpl_sports_admin/models/product_model.dart';
 import 'package:dkpl_sports_admin/core/widgets/base_background.dart';
 import 'package:dkpl_sports_admin/core/widgets/dkpl_card.dart';
 import 'package:dkpl_sports_admin/core/constants/app_colors.dart';
 import 'package:dkpl_sports_admin/core/constants/app_styles.dart';
+import 'package:dkpl_sports_admin/core/constants/role_permissions.dart';
 
 import 'add_product_screen.dart';
 import 'edit_product_screen.dart';
@@ -25,16 +27,57 @@ class ProductListScreen extends StatefulWidget {
 
 class _ProductListScreenState extends State<ProductListScreen> {
   final ProductService _productService = ProductService();
+  String get _role => AuthService.instance.currentUser?.role ?? '';
+  bool get _canManageProducts => RolePermissions.canManageProducts(_role);
+  bool get _canManageVariants => RolePermissions.canManageVariants(_role);
 
   String _formatPrice(num price) {
     return NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(price);
+  }
+
+  Future<void> _confirmDeleteProduct(ProductModel model) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa sản phẩm'),
+        content: Text('Bạn có chắc muốn xóa "${model.name}" không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    try {
+      await _productService.deleteProduct(model.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã xóa sản phẩm thành công.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Xóa thất bại: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return BaseBackground(
       appBar: AppBar(
-        title: const Text('Quản Lý Sản Phẩm', style: AppStyles.h2),
+        title: Text(
+          _canManageProducts ? 'Quản Lý Sản Phẩm' : 'Sản phẩm & Biến thể',
+          style: AppStyles.h2,
+        ),
         backgroundColor: Colors.transparent,
         actions: [
           IconButton(
@@ -69,15 +112,17 @@ class _ProductListScreenState extends State<ProductListScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: "btn_add_product",
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const AddProductScreen()),
-        ),
-        backgroundColor: AppColors.accentCyan,
-        child: const Icon(Icons.add, color: AppColors.primaryNavy, size: 28),
-      ),
+      floatingActionButton: _canManageProducts
+          ? FloatingActionButton(
+              heroTag: "btn_add_product",
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddProductScreen()),
+              ),
+              backgroundColor: AppColors.accentCyan,
+              child: const Icon(Icons.add, color: AppColors.primaryNavy, size: 28),
+            )
+          : null,
     );
   }
 
@@ -139,26 +184,41 @@ class _ProductListScreenState extends State<ProductListScreen> {
               Switch(
                 value: isActive,
                 activeColor: AppColors.accentCyan,
-                onChanged: (val) => _productService.updateProduct(model.id, {'is_active': val}),
+                onChanged: _canManageProducts
+                    ? (val) => _productService.updateProduct(model.id, {'is_active': val})
+                    : null,
               ),
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.visibility_outlined, size: 20, color: Colors.white),
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ManageVariantsScreen(productId: model.id, productName: name),
+                    icon: Icon(
+                      Icons.visibility_outlined,
+                      size: 20,
+                      color: _canManageVariants ? Colors.white : Colors.white24,
+                    ),
+                    onPressed: _canManageVariants
+                        ? () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ManageVariantsScreen(productId: model.id, productName: name),
+                            ),
+                          )
+                        : null,
+                  ),
+                  if (_canManageProducts)
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.white),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => EditProductScreen(productID: model.id)),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.white),
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => EditProductScreen(productID: model.id)),
+                  if (_canManageProducts)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                      onPressed: () => _confirmDeleteProduct(model),
                     ),
-                  ),
                 ],
               ),
             ],

@@ -34,7 +34,7 @@ class StaffModel {
       address: json['address'] ?? '',
       dateOfBirth: json['dateOfBirth'] ?? '',
       joinDate: json['joinDate'] ?? '', // <--- ĐỌC TỪ FIREBASE
-      role: json['role'] ?? 'cskh',
+      role: json['role'] ?? 'sales',
       avatar: json['avatar'] ?? '',
       createdAt: json['createdAt'] ?? '',
       createdBy: json['createdBy'] ?? 'system',

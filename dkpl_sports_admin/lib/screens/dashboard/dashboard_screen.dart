@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:dkpl_sports_admin/core/constants/app_colors.dart';
+import 'package:dkpl_sports_admin/core/constants/role_permissions.dart';
 import 'package:dkpl_sports_admin/core/widgets/base_background.dart';
 import 'package:dkpl_sports_admin/core/widgets/dkpl_card.dart';
 import 'package:dkpl_sports_admin/models/dashboard_models.dart';
+import 'package:dkpl_sports_admin/services/auth_service.dart';
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
 // ── SCREEN ────────────────────────────────────────────────────────────────────
@@ -59,6 +61,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canViewReport = RolePermissions.canViewRevenueReport(
+      AuthService.instance.currentUser?.role,
+    );
+
+    if (!canViewReport) {
+      return BaseBackground(
+        appBar: AppBar(
+          title: const Text('Báo Cáo Doanh Thu'),
+        ),
+        child: const Center(
+          child: Text(
+            'Bạn không có quyền xem báo cáo doanh thu.',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
+      );
+    }
+
     return BaseBackground(
       appBar: AppBar(
         title: const Text('Báo Cáo Doanh Thu'),

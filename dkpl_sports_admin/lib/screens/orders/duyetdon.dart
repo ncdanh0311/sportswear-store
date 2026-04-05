@@ -6,7 +6,14 @@ import 'package:dkpl_sports_admin/core/widgets/base_background.dart';
 import 'package:dkpl_sports_admin/core/widgets/dkpl_card.dart';
 
 class DuyetDonScreen extends StatefulWidget {
-  const DuyetDonScreen({super.key});
+  const DuyetDonScreen({
+    super.key,
+    this.canUpdateStatus = true,
+    this.paidOnlyMode = false,
+  });
+
+  final bool canUpdateStatus;
+  final bool paidOnlyMode;
 
   @override
   State<DuyetDonScreen> createState() => _DuyetDonScreenState();
@@ -17,7 +24,10 @@ class _DuyetDonScreenState extends State<DuyetDonScreen> {
   Widget build(BuildContext context) {
     return BaseBackground(
       appBar: AppBar(
-        title: const Text('Duyệt Đơn Hàng', style: AppStyles.h2),
+        title: Text(
+          widget.paidOnlyMode ? 'Đơn đã thanh toán' : 'Duyệt Đơn Hàng',
+          style: AppStyles.h2,
+        ),
         backgroundColor: Colors.transparent,
         actions: [
           IconButton(
@@ -58,13 +68,23 @@ class _DuyetDonScreenState extends State<DuyetDonScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.15),
+                    color: widget.paidOnlyMode
+                        ? Colors.green.withOpacity(0.15)
+                        : Colors.orange.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.withOpacity(0.5)),
+                    border: Border.all(
+                      color: widget.paidOnlyMode
+                          ? Colors.green.withOpacity(0.5)
+                          : Colors.orange.withOpacity(0.5),
+                    ),
                   ),
-                  child: const Text(
-                    "Chờ duyệt", 
-                    style: TextStyle(color: Colors.orangeAccent, fontSize: 11, fontWeight: FontWeight.bold)
+                  child: Text(
+                    widget.paidOnlyMode ? "Đã thanh toán" : "Chờ duyệt",
+                    style: TextStyle(
+                      color: widget.paidOnlyMode ? Colors.greenAccent : Colors.orangeAccent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -103,49 +123,66 @@ class _DuyetDonScreenState extends State<DuyetDonScreen> {
             const SizedBox(height: 20),
 
             // ── Khối Nút Thao tác (Hủy / Duyệt) ──
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent.withOpacity(0.1),
-                      foregroundColor: Colors.redAccent,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: Colors.redAccent, width: 1.2),
+            if (widget.canUpdateStatus)
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent.withOpacity(0.1),
+                        foregroundColor: Colors.redAccent,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(color: Colors.redAccent, width: 1.2),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      onPressed: () {
+                        // Xử lý từ chối
+                      },
+                      icon: const Icon(Icons.close, size: 18),
+                      label: const Text("Từ chối", style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
-                    onPressed: () {
-                      // Xử lý từ chối
-                    },
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text("Từ chối", style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.greenAccent.withOpacity(0.1),
-                      foregroundColor: Colors.greenAccent,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: Colors.greenAccent, width: 1.2),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.greenAccent.withOpacity(0.1),
+                        foregroundColor: Colors.greenAccent,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(color: Colors.greenAccent, width: 1.2),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      onPressed: () {
+                        // Xử lý duyệt đơn
+                      },
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text("Duyệt đơn", style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
-                    onPressed: () {
-                      // Xử lý duyệt đơn
-                    },
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text("Duyệt đơn", style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
+                ],
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white24),
                 ),
-              ],
-            )
+                child: Text(
+                  widget.paidOnlyMode
+                      ? 'Vai trò kế toán: theo dõi các đơn đã thanh toán.'
+                      : 'Vai trò này chỉ có quyền theo dõi đơn hàng.',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ),
           ],
         ),
       ),

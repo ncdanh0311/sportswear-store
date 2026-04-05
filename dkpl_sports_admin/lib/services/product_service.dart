@@ -69,6 +69,21 @@ class ProductService {
     await _firestore.collection('products').doc(productId).update(data);
   }
 
+  Future<void> deleteProduct(String productId) async {
+    final productRef = _firestore.collection('products').doc(productId);
+
+    // Xóa toàn bộ biến thể con trước khi xóa document cha.
+    final variants = await productRef.collection('variants').get();
+    final batch = _firestore.batch();
+
+    for (final doc in variants.docs) {
+      batch.delete(doc.reference);
+    }
+    batch.delete(productRef);
+
+    await batch.commit();
+  }
+
   Future<DocumentSnapshot> getProduct(String productId) {
     return _firestore.collection('products').doc(productId).get();
   }

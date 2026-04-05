@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dkpl_sports_admin/core/constants/app_colors.dart';
+import 'package:dkpl_sports_admin/core/constants/role_permissions.dart';
 import 'package:dkpl_sports_admin/core/constants/app_styles.dart';
 import 'package:dkpl_sports_admin/core/widgets/base_background.dart';
 import 'package:dkpl_sports_admin/core/widgets/dkpl_card.dart';
 import 'package:dkpl_sports_admin/models/voucher_model.dart';
 import 'package:dkpl_sports_admin/services/product_service.dart';
+import 'package:dkpl_sports_admin/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -22,6 +24,8 @@ class VoucherListScreen extends StatefulWidget {
 
 class _VoucherListScreenState extends State<VoucherListScreen> {
   final ProductService _productService = ProductService();
+  bool get _canManageVouchers =>
+      RolePermissions.canManageVouchers(AuthService.instance.currentUser?.role);
 
   // Hàm fomat tiền cho đẹp
   String _formatPrice(num price) {
@@ -30,6 +34,21 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_canManageVouchers) {
+      return BaseBackground(
+        appBar: AppBar(
+          title: const Text("Quản lý Voucher", style: AppStyles.h2),
+          backgroundColor: Colors.transparent,
+        ),
+        child: const Center(
+          child: Text(
+            'Bạn không có quyền quản lý voucher.',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
+      );
+    }
+
     return BaseBackground(
       appBar: AppBar(
         title: const Text("Quản lý Voucher", style: AppStyles.h2),

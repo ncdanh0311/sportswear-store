@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dkpl_sports_admin/core/constants/app_colors.dart';
 import 'package:dkpl_sports_admin/core/constants/app_styles.dart';
+import 'package:dkpl_sports_admin/core/constants/role_permissions.dart';
 import 'package:dkpl_sports_admin/core/widgets/base_background.dart';
 import 'package:dkpl_sports_admin/core/widgets/dkpl_card.dart';
 import 'package:dkpl_sports_admin/core/widgets/dkpl_button.dart';
 import 'package:dkpl_sports_admin/core/widgets/product_widgets.dart'; // Để dùng ProductTextField
+import 'package:dkpl_sports_admin/services/auth_service.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -17,9 +19,26 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   // Collection Products thực tế trên Firebase của bạn
   final CollectionReference _productsRef = FirebaseFirestore.instance.collection('products');
+  bool get _canManageInventory =>
+      RolePermissions.canManageInventory(AuthService.instance.currentUser?.role);
 
   @override
   Widget build(BuildContext context) {
+    if (!_canManageInventory) {
+      return BaseBackground(
+        appBar: AppBar(
+          title: const Text('Quản Lý Kho Hàng', style: AppStyles.h2),
+          backgroundColor: Colors.transparent,
+        ),
+        child: const Center(
+          child: Text(
+            'Bạn không có quyền quản lý tồn kho.',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
+      );
+    }
+
     return BaseBackground(
       appBar: AppBar(
         title: const Text('Quản Lý Kho Hàng', style: AppStyles.h2),
