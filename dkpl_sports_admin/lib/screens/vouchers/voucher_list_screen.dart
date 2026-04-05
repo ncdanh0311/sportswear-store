@@ -10,7 +10,6 @@ import 'package:dkpl_sports_admin/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-// Import các màn hình liên quan
 import 'add_voucher_screen.dart';
 import 'detail_voucher_screen.dart';
 import 'edit_voucher_screen.dart';
@@ -25,9 +24,8 @@ class VoucherListScreen extends StatefulWidget {
 class _VoucherListScreenState extends State<VoucherListScreen> {
   final ProductService _productService = ProductService();
   bool get _canManageVouchers =>
-      RolePermissions.canManageVouchers(AuthService.instance.currentUser?.role);
+      RolePermissions.canManageVouchers(AuthService.instance.currentUser?.roleId);
 
-  // Hàm fomat tiền cho đẹp
   String _formatPrice(num price) {
     return NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(price);
   }
@@ -58,12 +56,10 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
         heroTag: "btn_add_voucher",
         backgroundColor: AppColors.accentCyan,
         onPressed: () {
-          // Chuyển sang màn hình Thêm Voucher
           Navigator.push(context, MaterialPageRoute(builder: (_) => const AddVoucherScreen()));
         },
         child: const Icon(Icons.add, color: AppColors.primaryNavy, size: 28),
       ),
-      // Dùng StreamBuilder để lấy dữ liệu realtime
       child: StreamBuilder<QuerySnapshot>(
         stream: _productService.getVouchersStream(),
         builder: (context, snapshot) {
@@ -94,10 +90,8 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
   }
 
   Widget _buildVoucherItem(VoucherModel model) {
-    // 1. Bóc tách dữ liệu từ Model
     String code = model.code;
-    String type = model.discountType; // 'percent' hoặc 'fixed'
-    double discountValue = model.discountValue;
+    double discountValue = model.discount;
     double minOrder = model.minOrder;
     double maxDiscount = model.maxDiscount;
 
@@ -105,24 +99,11 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
     int usedCount = model.usedCount;
     bool isActive = model.isActive;
 
-    // 2. Format Ngày tháng
-    Timestamp? startTs = model.startDate;
-    Timestamp? endTs = model.endDate;
-    String dateStart = startTs != null ? DateFormat('dd/MM').format(startTs.toDate()) : '...';
-    String dateEnd = endTs != null ? DateFormat('dd/MM').format(endTs.toDate()) : '...';
-
-    // 3. Tính toán chuỗi hiển thị mức giảm
-    String discountTitle = "";
-    if (type == 'percent') {
-      discountTitle = "Giảm ${discountValue.toInt()}%";
-      if (maxDiscount > 0) {
-        discountTitle += " (Tối đa ${_formatPrice(maxDiscount)})";
-      }
-    } else {
-      discountTitle = "Giảm ${_formatPrice(discountValue)}";
+    String discountTitle = "Giảm ${_formatPrice(discountValue)}";
+    if (maxDiscount > 0) {
+      discountTitle += " (Tối đa ${_formatPrice(maxDiscount)})";
     }
 
-    // 4. Tính % thanh Progress
     double progress = usageLimit > 0 ? (usedCount / usageLimit) : 0;
     if (progress > 1.0) progress = 1.0;
 
@@ -130,12 +111,10 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
       padding: const EdgeInsets.all(0),
       child: Row(
         children: [
-          // Phần cuống vé bên trái (Hiển thị Mã)
           Container(
             width: 100,
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
             decoration: BoxDecoration(
-              // Nếu hết hạn hoặc hết lượt -> Đổi màu xám xịt cho dễ nhận biết
               color: isActive ? AppColors.primaryBlue.withOpacity(0.3) : Colors.white10,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
@@ -161,8 +140,6 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
               ),
             ),
           ),
-
-          // Phần nội dung bên phải
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(12.0),
@@ -183,15 +160,12 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   const SizedBox(height: 8),
-
-                  // Thanh tiến độ sử dụng
                   Row(
                     children: [
                       Expanded(
                         child: LinearProgressIndicator(
                           value: progress,
                           backgroundColor: Colors.white10,
-                          // Gần hết lượt thì thanh tiến độ đổi màu đỏ/cam
                           color: progress > 0.8 ? Colors.redAccent : AppColors.accentCyan,
                           minHeight: 6,
                           borderRadius: BorderRadius.circular(10),
@@ -205,21 +179,16 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-
-                  // Hành động & Trạng thái
                   Row(
                     children: [
-                      // 1. Bọc Expanded để text ngày tháng tự lùi nhường chỗ
-                      Expanded(
+                      const Expanded(
                         child: Text(
-                          "HSD: $dateStart - $dateEnd",
-                          style: const TextStyle(color: Colors.orangeAccent, fontSize: 11),
+                          "Voucher",
+                          style: TextStyle(color: Colors.orangeAccent, fontSize: 11),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis, // Nếu chật quá nó sẽ hiện dấu "..."
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-
-                      // 2. Thu nhỏ Switch lại 20% cho gọn
                       Transform.scale(
                         scale: 0.8,
                         child: Switch(
@@ -230,8 +199,6 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                           },
                         ),
                       ),
-
-                      // 3. Ép khoảng cách 2 nút Icon lại sát nhau
                       IconButton(
                         onPressed: () {
                           Navigator.push(
@@ -269,4 +236,3 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
     );
   }
 }
-

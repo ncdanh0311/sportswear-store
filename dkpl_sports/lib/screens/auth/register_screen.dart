@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/custom_button.dart';
 import '../../core/widgets/custom_textfield.dart';
-import '../../services/auth_service.dart'; // Import Service
+import '../../services/local_auth_service.dart'; // Local JSON service
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -45,7 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     // GỌI LOGIC TỪ AUTH SERVICE
-    final result = await AuthService.instance.register(
+    final result = await LocalAuthService.instance.register(
       email: email,
       password: pass,
       name: name,

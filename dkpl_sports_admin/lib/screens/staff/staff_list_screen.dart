@@ -21,7 +21,7 @@ class StaffListScreen extends StatefulWidget {
 class _StaffListScreenState extends State<StaffListScreen> {
   Future<bool> _deleteStaff(StaffModel staff) async {
     final currentUser = AuthService.instance.currentUser;
-    final currentRole = currentUser?.role;
+    final currentRole = currentUser?.roleId;
 
     final canDelete = RolePermissions.isManagerLike(currentRole);
     if (!canDelete) return false;
@@ -49,12 +49,7 @@ class _StaffListScreenState extends State<StaffListScreen> {
     if (confirmed != true) return false;
 
     try {
-      await FirebaseFirestore.instance.collection('staff').doc(staff.id).update({
-        'isDeleted': true,
-        'deletedAt': DateTime.now().toIso8601String(),
-        'deletedBy': currentUser?.id ?? 'system',
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
+      await FirebaseFirestore.instance.collection('staff').doc(staff.id).delete();
 
       if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,7 +67,8 @@ class _StaffListScreenState extends State<StaffListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canManageStaff = RolePermissions.canManageStaff(AuthService.instance.currentUser?.role);
+    final canManageStaff =
+        RolePermissions.canManageStaff(AuthService.instance.currentUser?.roleId);
     final staffRef = FirebaseFirestore.instance.collection('staff');
 
     if (!canManageStaff) {
@@ -111,10 +107,7 @@ class _StaffListScreenState extends State<StaffListScreen> {
             return const Center(child: CircularProgressIndicator(color: AppColors.accentCyan));
           }
 
-          final docs = snapshot.data!.docs.where((doc) {
-            final map = doc.data() as Map<String, dynamic>;
-            return map['isDeleted'] != true;
-          }).toList();
+          final docs = snapshot.data!.docs;
 
           docs.sort((a, b) {
             final aMap = a.data() as Map<String, dynamic>;
@@ -144,7 +137,7 @@ class _StaffListScreenState extends State<StaffListScreen> {
             itemBuilder: (context, index) {
               final staff = staffs[index];
               final currentUser = AuthService.instance.currentUser;
-              final canDelete = RolePermissions.isManagerLike(currentUser?.role);
+              final canDelete = RolePermissions.isManagerLike(currentUser?.roleId);
               final canDeleteThisStaff = canDelete && currentUser?.id != staff.id;
 
               if (!canDeleteThisStaff) {
@@ -212,11 +205,10 @@ class _StaffItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 24,
             backgroundColor: Colors.white12,
-            backgroundImage: staff.avatar.isNotEmpty ? NetworkImage(staff.avatar) : null,
-            child: staff.avatar.isEmpty ? const Icon(Icons.person_outline, color: Colors.white70) : null,
+            child: Icon(Icons.person_outline, color: Colors.white70),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -237,7 +229,12 @@ class _StaffItem extends StatelessWidget {
                 Text('Phone: ${staff.phone}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
                 const SizedBox(height: 2),
                 Text(
-                  'Role: ${RolePermissions.roleLabel(staff.role)}',
+                  'DOB: ${staff.dob ?? '---'}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Role: ${RolePermissions.roleLabel(staff.roleId)}',
                   style: const TextStyle(color: AppColors.accentCyan, fontSize: 12),
                 ),
                 const SizedBox(height: 2),

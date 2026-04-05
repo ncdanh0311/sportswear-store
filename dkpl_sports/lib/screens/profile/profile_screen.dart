@@ -4,11 +4,24 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/user_session.dart';
 import '../../core/constants/app_colors.dart';
 import '../../services/auth_service.dart';
+import '../../services/local_auth_service.dart';
+import '../../services/local_order_service.dart';
+import '../orders/order_history_screen.dart';
 import '../../services/profile_service.dart';
 import 'edit_profile_screen.dart';
+import 'voucher_screen.dart';
+import 'address_book_screen.dart';
+import '../orders/order_status_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final bool embedded;
+  final VoidCallback? onLoggedOut;
+
+  const ProfileScreen({
+    super.key,
+    this.embedded = false,
+    this.onLoggedOut,
+  });
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -16,6 +29,29 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final session = UserSession();
   bool _isLoading = false;
+  int _pendingCount = 0;
+  int _shippingCount = 0;
+  int _deliveredCount = 0;
+  int _reviewCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOrderCounts();
+  }
+
+  Future<void> _loadOrderCounts() async {
+    final uid = session.uid;
+    if (uid == null) return;
+    final counts = await LocalOrderService.instance.getStatusCounts(uid);
+    if (!mounted) return;
+    setState(() {
+      _pendingCount = counts['pending'] ?? 0;
+      _shippingCount = counts['shipping'] ?? 0;
+      _deliveredCount = counts['delivered'] ?? 0;
+      _reviewCount = counts['review'] ?? 0;
+    });
+  }
 
   Future<void> _updateAvatar() async {
     final picker = ImagePicker();
@@ -76,22 +112,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _buildMenuTile(
                         icon: Icons.confirmation_number_outlined,
                         title: "Kho Voucher",
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const VoucherScreen(),
+                            ),
+                          );
+                        },
                       ),
                       _buildMenuTile(
                         icon: Icons.location_on_outlined,
                         title: "Địa chỉ nhận hàng",
-                        onTap: () {},
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AddressBookScreen(),
+                            ),
+                          );
+                          _loadOrderCounts();
+                        },
                       ),
                       const SizedBox(height: 20),
+                      _buildMenuTile(
+                        icon: Icons.receipt_long,
+                        title: "Lịch sử mua hàng",
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const OrderHistoryScreen(),
+                            ),
+                          );
+                          _loadOrderCounts();
+                        },
+                      ),
                       _buildMenuTile(
                         icon: Icons.logout,
                         title: "Đăng xuất",
                         textColor: Colors.red,
                         iconColor: Colors.red,
                         onTap: () async {
+                          await LocalAuthService.instance.logout();
                           await AuthService.instance.logout();
-                          if (mounted) Navigator.pop(context); // Về trang chủ
+                          widget.onLoggedOut?.call();
+                          if (!widget.embedded && mounted) {
+                            Navigator.pop(context);
+                          }
                         },
                       ),
                       const SizedBox(
@@ -225,12 +293,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: AppColors.textDark,
                 ),
               ),
-              Text(
-                "Xem tất cả",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.accentBlue,
+              GestureDetector(
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const OrderHistoryScreen(),
+                    ),
+                  );
+                  _loadOrderCounts();
+                },
+                child: Text(
+                  "Xem tất cả",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.accentBlue,
+                  ),
                 ),
               ),
             ],
@@ -239,10 +318,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildStatusIcon(Icons.inventory_2_outlined, "Chờ xác nhận"),
-              _buildStatusIcon(Icons.local_shipping_outlined, "Đang giao"),
-              _buildStatusIcon(Icons.check_circle_outline, "Đã giao"),
-              _buildStatusIcon(Icons.star_outline, "Đánh giá"),
+              _buildStatusIcon(
+                Icons.inventory_2_outlined,
+                "Chờ xác nhận",
+                _pendingCount,
+                () => _openStatus('pending', 'Chờ xác nhận'),
+              ),
+              _buildStatusIcon(
+                Icons.local_shipping_outlined,
+                "Đang giao",
+                _shippingCount,
+                () => _openStatus('shipping', 'Đang giao'),
+              ),
+              _buildStatusIcon(
+                Icons.check_circle_outline,
+                "Đã giao",
+                _deliveredCount,
+                () => _openStatus('delivered', 'Đã giao'),
+              ),
+              _buildStatusIcon(
+                Icons.star_outline,
+                "Đánh giá",
+                _reviewCount,
+                () => _openStatus('review', 'Đánh giá'),
+              ),
             ],
           ),
         ],
@@ -251,28 +350,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // Tiện ích vẽ icon cho phần Tình trạng đơn hàng
-  Widget _buildStatusIcon(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            shape: BoxShape.circle,
+  Widget _buildStatusIcon(
+    IconData icon,
+    String label,
+    int count,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: AppColors.primaryBlue, size: 26),
+              ),
+              if (count > 0)
+                Positioned(
+                  right: -4,
+                  top: -4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          child: Icon(icon, color: AppColors.primaryBlue, size: 26),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textLight,
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textLight,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
+  }
+
+  void _openStatus(String status, String title) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OrderStatusScreen(status: status, title: title),
+      ),
+    );
+    _loadOrderCounts();
   }
 
   // ==========================================

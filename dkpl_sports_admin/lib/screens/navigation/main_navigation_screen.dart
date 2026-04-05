@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-// --- IMPORTS CORE & SERVICES ---
-import 'package:dkpl_sports_admin/services/product_service.dart';
 import 'package:dkpl_sports_admin/services/auth_service.dart';
 import 'package:dkpl_sports_admin/core/constants/app_colors.dart';
 import 'package:dkpl_sports_admin/core/constants/role_permissions.dart';
@@ -27,7 +25,6 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  final ProductService _productService = ProductService();
   int _currentIndex = 0;
 
   List<Widget> _pages = [];
@@ -36,12 +33,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   void initState() {
     super.initState();
-    _productService.autoCheckExpiredEvents();
     _buildTabsByRole();
   }
 
   void _buildTabsByRole() {
-    final rawRole = AuthService.instance.currentUser?.role;
+    final rawRole = AuthService.instance.currentUser?.roleId;
     final role = RolePermissions.normalizeRole(rawRole);
     final modules = RolePermissions.modulesForRole(role);
 
@@ -63,15 +59,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
 
     final tabChat = const ChatListScreen();
-    final itemChat = const BottomNavigationBarItem(
-      icon: Badge(label: Text('7'), child: Icon(Icons.chat_bubble_outline_rounded)),
+    final itemChat = BottomNavigationBarItem(
+      icon: const Icon(Icons.chat_bubble_outline_rounded),
       label: 'Chat',
     );
 
-    final tabDonHang = DuyetDonScreen(
-      canUpdateStatus: RolePermissions.canUpdateOrderStatus(role),
-      paidOnlyMode: RolePermissions.paidOnlyModeForOrders(role),
-    );
+    final tabDonHang = const DuyetDonScreen();
     final itemDonHang = const BottomNavigationBarItem(
       icon: Icon(Icons.receipt_long_outlined),
       label: 'Đơn hàng',
@@ -151,13 +144,24 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_navItems.length < 2) {
+      return Scaffold(
+        backgroundColor: AppColors.primaryNavy,
+        body: _pages.isNotEmpty
+            ? _pages[_currentIndex]
+            : const SizedBox.shrink(),
+      );
+    }
     return Scaffold(
       backgroundColor: AppColors.primaryNavy,
       body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: Theme(
         data: Theme.of(
           context,
-        ).copyWith(splashColor: Colors.transparent, highlightColor: Colors.transparent),
+        ).copyWith(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+        ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),

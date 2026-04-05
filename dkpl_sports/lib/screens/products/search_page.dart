@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_colors.dart'; // Đổi đường dẫn cho đúng
-import 'filter_page.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/widgets/product_card.dart';
+import '../../models/product_model.dart';
+import '../../services/product_repository.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -9,8 +11,45 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  TextEditingController searchCtrl = TextEditingController();
-  List<String> history = ["Giày bóng đá", "Bóng rổ", "Phụ kiện"];
+  final TextEditingController _searchCtrl = TextEditingController();
+  List<ProductModel> _allProducts = [];
+  List<ProductModel> _results = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    final data = await ProductRepository.loadProducts();
+    if (!mounted) return;
+    setState(() {
+      _allProducts = data;
+      _results = data;
+    });
+  }
+
+  void _onSearchChanged(String value) {
+    final keyword = value.trim().toLowerCase();
+    if (keyword.isEmpty) {
+      setState(() => _results = _allProducts);
+      return;
+    }
+    setState(() {
+      _results = _allProducts.where((p) {
+        return p.name.toLowerCase().contains(keyword) ||
+            p.categoryId.toLowerCase().contains(keyword) ||
+            p.description.toLowerCase().contains(keyword);
+      }).toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,71 +59,88 @@ class _SearchPageState extends State<SearchPage> {
         backgroundColor: AppColors.background,
         elevation: 0,
         leading: const BackButton(color: AppColors.textDark),
-        title: _buildSearchBar(context),
+        title: _buildSearchBar(),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Lịch sử tìm kiếm", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: history.map((h) {
-                return Chip(
-                  label: Text(h, style: const TextStyle(color: AppColors.textDark)),
-                  backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade300)),
-                );
-              }).toList(),
+            Text(
+              'Kết quả (${_results.length})',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
             ),
-            const SizedBox(height: 30),
-            const Text("Gợi ý hôm nay", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-            const SizedBox(height: 10),
-            Expanded(child: _buildResultGrid()),
+            const SizedBox(height: 12),
+            Expanded(
+              child: _results.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Không tìm thấy sản phẩm phù hợp',
+                        style: TextStyle(color: AppColors.textLight),
+                      ),
+                    )
+                  : GridView.builder(
+                      itemCount: _results.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.72,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                      ),
+                      itemBuilder: (context, index) {
+                        return ProductCard(product: _results[index]);
+                      },
+                    ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSearchBar(BuildContext context) {
+  Widget _buildSearchBar() {
     return Container(
-      height: 45,
-      decoration: BoxDecoration(border: Border.all(color: AppColors.primaryBlue, width: 2), borderRadius: BorderRadius.circular(30)),
-      child: Row(
-        children: [
-          const SizedBox(width: 12),
-          Expanded(child: TextField(controller: searchCtrl, decoration: const InputDecoration(hintText: "Tìm kiếm...", border: InputBorder.none))),
-          IconButton(icon: const Icon(Icons.tune, color: AppColors.textDark), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FilterPage()))),
-          Container(
-            width: 50, height: double.infinity,
-            decoration: const BoxDecoration(color: AppColors.primaryBlue, borderRadius: BorderRadius.only(topRight: Radius.circular(28), bottomRight: Radius.circular(28))),
-            child: IconButton(icon: const Icon(Icons.search, color: Colors.white), onPressed: () {}),
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildResultGrid() {
-    return GridView.builder(
-      itemCount: 8,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.75, mainAxisSpacing: 12, crossAxisSpacing: 12),
-      itemBuilder: (context, index) {
-        return Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade200)),
-          child: Column(
-            children: [
-              Expanded(child: Container(padding: const EdgeInsets.all(8), child: Image.asset("assets/images/bongda.jpg", fit: BoxFit.contain))),
-              Text("Sản phẩm $index", style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-            ],
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+          const Icon(Icons.search, color: AppColors.textLight),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: _onSearchChanged,
+              decoration: const InputDecoration(
+                hintText: 'Tìm kiếm sản phẩm...',
+                border: InputBorder.none,
+              ),
+            ),
           ),
-        );
-      },
+          IconButton(
+            icon: const Icon(Icons.close, color: AppColors.textLight),
+            onPressed: () {
+              _searchCtrl.clear();
+              _onSearchChanged('');
+            },
+          ),
+        ],
+      ),
     );
   }
 }

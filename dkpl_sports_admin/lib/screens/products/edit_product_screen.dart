@@ -23,13 +23,12 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
   final _nameController = TextEditingController();
   final _descController = TextEditingController();
-  final _colorsController = TextEditingController();
 
-  String? _selectedCategory, _selectedSport, _selectedBrands;
-  String? _selectedNeckStyle, _selectedSleeveStyle;
-  List<String> _categories = [], _sports = [], _brands = [], _neckStyles = [], _sleeveStyles = [];
+  String? _selectedCategory, _selectedSport, _selectedBrand;
+  String? _selectedMaterial, _selectedNeckStyle, _selectedSleeveStyle;
+  List<String> _categories = [], _sports = [], _brands = [];
+  List<String> _materials = [], _neckStyles = [], _sleeveStyles = [];
 
-  // Image Logic
   List<String> _oldImageUrls = [];
   final List<File> _newImageFiles = [];
   final ImagePicker _picker = ImagePicker();
@@ -44,70 +43,102 @@ class _EditProductScreenState extends State<EditProductScreen> {
   Future<void> _initData() async {
     final config = await _productService.fetchAppConfig();
     final doc = await _productService.getProduct(widget.productID);
+    final images = await _productService
+        .getProductImagesStream(widget.productID)
+        .first;
 
     if (mounted && doc.exists) {
       final data = doc.data() as Map<String, dynamic>;
-      final specs = data['common_specs'] as Map<String, dynamic>?;
 
       setState(() {
-        // Config Data
         _categories = List<String>.from(config['categories'] ?? []);
         _sports = List<String>.from(config['sports'] ?? []);
         _brands = List<String>.from(config['brands'] ?? []);
+        _materials = List<String>.from(config['materials'] ?? []);
         _neckStyles = List<String>.from(config['neck_styles'] ?? []);
         _sleeveStyles = List<String>.from(config['sleeve_styles'] ?? []);
 
-        // Product Data
         _nameController.text = data['name'] ?? '';
         _descController.text = data['description'] ?? '';
-        _colorsController.text = data['color_name'] ?? '';
-        _selectedCategory = data['category_id'];
-        _selectedSport = data['sport_id'];
-        _selectedBrands = data['brand'];
+        _selectedCategory = data['categoryId'];
+        _selectedSport = data['sportId'];
+        _selectedBrand = data['brandId'];
+        _selectedMaterial = data['materialId'];
+        _selectedNeckStyle = data['neckStyleId'];
+        _selectedSleeveStyle = data['sleeveStyleId'];
 
-        // Nested Data
-        _selectedNeckStyle = specs?['neck_style'];
-        _selectedSleeveStyle = specs?['sleeve_style'];
-
-        _oldImageUrls = List<String>.from(data['images'] ?? []);
+        _oldImageUrls = images;
         _isLoading = false;
+        _syncDescription();
       });
     }
+  }
+
+  void _onAddAttr(String title, List<String> list, String collection, Function(String) onSet) {
+    showAddAttributeDialog(
+      context,
+      title: title,
+      onSave: (val) async {
+        setState(() {
+          list.add(val);
+          onSet(val);
+          _syncDescription();
+        });
+        await _productService.addAttributeToConfig(collection, val);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã thêm!")));
+      },
+    );
+  }
+
+  String _buildAutoDescription() {
+    final lines = <String>[];
+    if ((_selectedMaterial ?? '').isNotEmpty) {
+      lines.add("Chất liệu: $_selectedMaterial");
+    }
+    if ((_selectedNeckStyle ?? '').isNotEmpty) {
+      lines.add("Kiểu cổ: $_selectedNeckStyle");
+    }
+    if ((_selectedSleeveStyle ?? '').isNotEmpty) {
+      lines.add("Kiểu tay áo: $_selectedSleeveStyle");
+    }
+    return lines.join("\n");
+  }
+
+  void _syncDescription() {
+    _descController.text = _buildAutoDescription();
   }
 
   Future<void> _handleUpdate() async {
     setState(() => _isLoading = true);
     try {
-      // 1. Upload ảnh mới
       List<String> newUrls = await _productService.uploadImages(
         _newImageFiles,
         productId: widget.productID,
       );
 
-      // 2. Gộp ảnh cũ + mới
       List<String> finalImages = [..._oldImageUrls, ...newUrls];
+      _syncDescription();
 
       final data = {
         "name": _nameController.text.trim(),
-        "search_keywords": _nameController.text.toLowerCase().split(" "),
-        "category_id": _selectedCategory,
-        "sport_id": _selectedSport,
-        "brand": _selectedBrands,
-        "color_name": _colorsController.text,
         "description": _descController.text,
-        "common_specs": {"neck_style": _selectedNeckStyle, "sleeve_style": _selectedSleeveStyle},
-        "images": finalImages,
+        "categoryId": _selectedCategory,
+        "sportId": _selectedSport,
+        "brandId": _selectedBrand,
+        "materialId": _selectedMaterial,
+        "neckStyleId": _selectedNeckStyle,
+        "sleeveStyleId": _selectedSleeveStyle,
         "thumbnail": finalImages.isNotEmpty ? finalImages[0] : "",
       };
 
       await _productService.updateProduct(widget.productID, data);
+      await _productService.replaceProductImages(widget.productID, finalImages);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã cập nhật!")));
         Navigator.pop(context);
       }
     } catch (e) {
-      print(e);
       setState(() => _isLoading = false);
     }
   }
@@ -132,7 +163,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- IMAGE LIST (HYBRID) ---
                   const SectionTitle(title: "Hình ảnh"),
                   const SizedBox(height: 10),
                   SizedBox(
@@ -148,8 +178,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
                             child: const Icon(Icons.add_a_photo, color: Colors.white),
                           ),
                         ),
-
-                        // Old Images
                         ..._oldImageUrls.asMap().entries.map(
                           (e) => Stack(
                             children: [
@@ -164,8 +192,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
                             ],
                           ),
                         ),
-
-                        // New Images
                         ..._newImageFiles.asMap().entries.map(
                           (e) => Stack(
                             children: [
@@ -192,7 +218,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // --- INFO ---
                   const SectionTitle(title: "Thông tin"),
                   DKPLCard(
                     child: Column(
@@ -221,49 +246,72 @@ class _EditProductScreenState extends State<EditProductScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ProductTextField(label: "Màu", controller: _colorsController),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: ProductDropdown(
-                                label: "Brand",
-                                value: _selectedBrands,
-                                items: _brands,
-                                onChanged: (v) => setState(() => _selectedBrands = v),
-                              ),
-                            ),
-                          ],
+                        ProductDropdown(
+                          label: "Brand",
+                          value: _selectedBrand,
+                          items: _brands,
+                          onChanged: (v) => setState(() => _selectedBrand = v),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
 
-                  // --- SPECS ---
                   const SectionTitle(title: "Chi tiết"),
                   DKPLCard(
                     child: Column(
                       children: [
+                        ProductDropdown(
+                          label: "Chất liệu",
+                          value: _selectedMaterial,
+                          items: _materials,
+                          onChanged: (v) => setState(() {
+                            _selectedMaterial = v;
+                            _syncDescription();
+                          }),
+                          onAddPressed: () => _onAddAttr(
+                            "Chất liệu",
+                            _materials,
+                            "materials",
+                            (v) => _selectedMaterial = v,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         Row(
                           children: [
                             Expanded(
                               child: ProductDropdown(
-                                label: "Cổ",
+                                label: "Kiểu cổ",
                                 value: _selectedNeckStyle,
                                 items: _neckStyles,
-                                onChanged: (v) => setState(() => _selectedNeckStyle = v),
+                                onChanged: (v) => setState(() {
+                                  _selectedNeckStyle = v;
+                                  _syncDescription();
+                                }),
+                                onAddPressed: () => _onAddAttr(
+                                  "Kiểu cổ",
+                                  _neckStyles,
+                                  "neck_styles",
+                                  (v) => _selectedNeckStyle = v,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: ProductDropdown(
-                                label: "Tay",
+                                label: "Kiểu tay áo",
                                 value: _selectedSleeveStyle,
                                 items: _sleeveStyles,
-                                onChanged: (v) => setState(() => _selectedSleeveStyle = v),
+                                onChanged: (v) => setState(() {
+                                  _selectedSleeveStyle = v;
+                                  _syncDescription();
+                                }),
+                                onAddPressed: () => _onAddAttr(
+                                  "Kiểu tay áo",
+                                  _sleeveStyles,
+                                  "sleeve_styles",
+                                  (v) => _selectedSleeveStyle = v,
+                                ),
                               ),
                             ),
                           ],
@@ -282,4 +330,3 @@ class _EditProductScreenState extends State<EditProductScreen> {
     );
   }
 }
-

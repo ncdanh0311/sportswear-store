@@ -1,56 +1,59 @@
+import 'model_utils.dart';
+
 class StaffModel {
   final String id;
   final String fullName;
+  final String? dob;
   final String email;
+  final String password;
   final String phone;
   final String address;
-  final String dateOfBirth;
-  final String joinDate; // <--- THÊM MỚI: Ngày vào làm
-  final String role;
-  final String avatar;
-  final String createdAt;
-  final String createdBy;
+  final String cccd;
+  final String roleId;
+  final String? createdAt;
 
   const StaffModel({
     required this.id,
     required this.fullName,
+    required this.dob,
     required this.email,
+    required this.password,
     required this.phone,
     required this.address,
-    required this.dateOfBirth,
-    required this.joinDate, // <--- THÊM VÀO CONSTRUCTOR
-    required this.role,
-    required this.avatar,
+    required this.cccd,
+    required this.roleId,
     required this.createdAt,
-    required this.createdBy,
   });
 
   factory StaffModel.fromJson(Map<String, dynamic> json, String documentId) {
+    final roleId = ModelUtils.readString(
+      json['roleId'],
+      fallback: ModelUtils.readString(json['role']),
+    );
     return StaffModel(
       id: documentId,
-      fullName: json['fullName'] ?? '',
-      email: json['email'] ?? '',
-      phone: json['phone'] ?? '',
-      address: json['address'] ?? '',
-      dateOfBirth: json['dateOfBirth'] ?? '',
-      joinDate: json['joinDate'] ?? '', // <--- ĐỌC TỪ FIREBASE
-      role: json['role'] ?? 'sales',
-      avatar: json['avatar'] ?? '',
-      createdAt: json['createdAt'] ?? '',
-      createdBy: json['createdBy'] ?? 'system',
+      fullName: ModelUtils.readString(json['fullName']),
+      dob: ModelUtils.readDate(json['dob']),
+      email: ModelUtils.readString(json['email']),
+      password: ModelUtils.readString(json['password']),
+      phone: ModelUtils.readString(json['phone']),
+      address: ModelUtils.readString(json['address']),
+      cccd: ModelUtils.readString(json['cccd']),
+      roleId: roleId,
+      createdAt: ModelUtils.readDate(json['createdAt']),
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'fullName': fullName,
-    'email': email,
-    'phone': phone,
-    'address': address,
-    'dateOfBirth': dateOfBirth,
-    'joinDate': joinDate, // <--- GHI LÊN FIREBASE
-    'role': role,
-    'avatar': avatar,
-    'createdAt': createdAt,
-    'createdBy': createdBy,
-  };
+        'id': id,
+        'fullName': fullName,
+        'dob': dob,
+        'email': email,
+        'password': password,
+        'phone': phone,
+        'address': address,
+        'cccd': cccd,
+        'roleId': roleId,
+        'createdAt': createdAt,
+      };
 }

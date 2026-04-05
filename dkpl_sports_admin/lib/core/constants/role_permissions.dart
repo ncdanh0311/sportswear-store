@@ -71,7 +71,10 @@ class RolePermissions {
     return normalized == accounting || isManagerLike(normalized);
   }
 
-  static bool canManageStaff(String? role) => isManagerLike(role);
+  static bool canManageStaff(String? role) {
+    final normalized = normalizeRole(role);
+    return normalized == admin || normalized == owner;
+  }
 
   static bool canUpdateOrderStatus(String? role) {
     final normalized = normalizeRole(role);
@@ -94,6 +97,15 @@ class RolePermissions {
       case 'content':
         return const [AppModule.products, AppModule.events, AppModule.vouchers];
       case manager:
+        return const [
+          AppModule.dashboard,
+          AppModule.orders,
+          AppModule.products,
+          AppModule.inventory,
+          AppModule.chat,
+          AppModule.events,
+          AppModule.vouchers,
+        ];
       case admin:
       case owner:
         return const [

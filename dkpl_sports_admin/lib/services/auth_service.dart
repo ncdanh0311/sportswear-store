@@ -29,7 +29,30 @@ class AuthService {
         password: normalizedPassword,
       );
 
-      final doc = await _firestore.collection('staff').doc(userCredential.user!.uid).get();
+      final uid = userCredential.user!.uid;
+      final staffRef = _firestore.collection('staff').doc(uid);
+      var doc = await staffRef.get();
+
+      if (!doc.exists) {
+        final lookup = await _firestore
+            .collection('staff')
+            .where('email', isEqualTo: normalizedEmail)
+            .limit(1)
+            .get();
+        if (lookup.docs.isNotEmpty) {
+          final fallbackData = lookup.docs.first.data();
+          final merged = {
+            'id': uid,
+            ...fallbackData,
+          };
+          if ((merged['roleId'] ?? '').toString().isEmpty &&
+              (merged['role'] ?? '').toString().isNotEmpty) {
+            merged['roleId'] = merged['role'];
+          }
+          await staffRef.set(merged, SetOptions(merge: true));
+          doc = await staffRef.get();
+        }
+      }
 
       if (!doc.exists) {
         await _auth.signOut();
@@ -40,11 +63,12 @@ class AuthService {
       }
 
       final map = doc.data() as Map<String, dynamic>;
-      if (map['isDeleted'] == true) {
-        await _auth.signOut();
-        return const AuthResult(success: false, message: 'Tai khoan nhan su da bi vo hieu hoa.');
+      if ((map['roleId'] ?? '').toString().isEmpty &&
+          (map['role'] ?? '').toString().isNotEmpty) {
+        await staffRef.set({
+          'roleId': map['role'],
+        }, SetOptions(merge: true));
       }
-
       _currentUser = StaffModel.fromJson(map, doc.id);
       return AuthResult(success: true, message: 'Dang nhap thanh cong!', user: _currentUser);
     } on FirebaseAuthException catch (e) {
@@ -64,10 +88,10 @@ class AuthService {
     required String email,
     required String phone,
     required String address,
-    required String dateOfBirth,
-    required String joinDate,
+    required String dob,
+    required String cccd,
     required String password,
-    required String role,
+    required String roleId,
   }) async {
     try {
       final creatorId = _currentUser?.id ?? 'system';
@@ -80,45 +104,9 @@ class AuthService {
           .get();
 
       if (existingByEmail.docs.isNotEmpty) {
-        final existingDoc = existingByEmail.docs.first;
-        final existingData = existingDoc.data();
-        final isDeleted = existingData['isDeleted'] == true;
-
-        if (!isDeleted) {
-          return const AuthResult(
-            success: false,
-            message: 'Email nay dang duoc gan cho mot nhan su dang hoat dong.',
-          );
-        }
-
-        final restoredUser = StaffModel(
-          id: existingDoc.id,
-          fullName: fullName.trim(),
-          email: normalizedEmail,
-          phone: phone.trim(),
-          address: address.trim(),
-          dateOfBirth: dateOfBirth.trim(),
-          joinDate: joinDate.trim(),
-          role: role,
-          avatar: (existingData['avatar'] as String?)?.trim().isNotEmpty == true
-              ? (existingData['avatar'] as String)
-              : 'https://i.pravatar.cc/150?img=10',
-          createdAt: existingData['createdAt']?.toString() ?? DateTime.now().toIso8601String(),
-          createdBy: existingData['createdBy']?.toString() ?? creatorId,
-        );
-
-        await _firestore.collection('staff').doc(existingDoc.id).update({
-          ...restoredUser.toJson(),
-          'isDeleted': false,
-          'deletedAt': null,
-          'deletedBy': null,
-          'updatedAt': DateTime.now().toIso8601String(),
-        });
-
         return const AuthResult(
-          success: true,
-          message:
-              'Da kich hoat lai tai khoan cu theo email nay. Neu can, dung Quen mat khau de dat lai mat khau moi.',
+          success: false,
+          message: 'Email nay dang duoc gan cho mot nhan su dang hoat dong.',
         );
       }
 
@@ -132,21 +120,17 @@ class AuthService {
       final newUser = StaffModel(
         id: uid,
         fullName: fullName.trim(),
+        dob: dob.trim(),
         email: normalizedEmail,
+        password: password,
         phone: phone.trim(),
         address: address.trim(),
-        dateOfBirth: dateOfBirth.trim(),
-        joinDate: joinDate.trim(),
-        role: role,
-        avatar: 'https://i.pravatar.cc/150?img=10',
+        cccd: cccd.trim(),
+        roleId: roleId,
         createdAt: DateTime.now().toIso8601String(),
-        createdBy: creatorId,
       );
 
-      await _firestore.collection('staff').doc(uid).set({
-        ...newUser.toJson(),
-        'isDeleted': false,
-      });
+      await _firestore.collection('staff').doc(uid).set(newUser.toJson());
 
       return AuthResult(
         success: true,

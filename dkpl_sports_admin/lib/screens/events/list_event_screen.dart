@@ -26,14 +26,14 @@ class _ListEventScreenState extends State<ListEventScreen> {
   Widget build(BuildContext context) {
     return BaseBackground(
       appBar: AppBar(
-        title: const Text("Sự kiện khuyến mãi", style: AppStyles.h2),
+        title: const Text("Sự kiện", style: AppStyles.h2),
         backgroundColor: Colors.transparent,
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: "btn_add_event",
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateEventScreen()));
-        }, // gọi create_event_screen
+        },
         child: const Icon(Icons.add),
       ),
       child: StreamBuilder(
@@ -44,7 +44,7 @@ class _ListEventScreenState extends State<ListEventScreen> {
           }
           if (snapshot.data!.docs.isEmpty) {
             return const Center(
-              child: Text("Chưa có sản phẩm", style: TextStyle(color: Colors.white54)),
+              child: Text("Chưa có sự kiện", style: TextStyle(color: Colors.white54)),
             );
           }
 
@@ -66,14 +66,10 @@ class _ListEventScreenState extends State<ListEventScreen> {
   }
 
   Widget _buildEventItem(EventModel model) {
-    String name = model.name;
-    bool isActive = model.isActive;
     Timestamp? startTs = model.startDate;
     Timestamp? endTs = model.endDate;
     String dateStart = startTs != null ? DateFormat('dd/MM/yyyy').format(startTs.toDate()) : '...';
     String dateEnd = endTs != null ? DateFormat('dd/MM/yyyy').format(endTs.toDate()) : '...';
-    String bannerUrl = model.bannerUrl;
-    String eventType = model.eventType;
 
     return DKPLCard(
       padding: const EdgeInsets.all(12),
@@ -82,25 +78,19 @@ class _ListEventScreenState extends State<ListEventScreen> {
         children: [
           Row(
             children: [
-              if (bannerUrl.isNotEmpty)
-                ClipRRect(
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white10,
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(bannerUrl, width: 50, height: 50, fit: BoxFit.cover),
-                )
-              else
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.white10,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.event_available, color: Colors.white54),
                 ),
+                child: const Icon(Icons.event_available, color: Colors.white54),
+              ),
               const SizedBox(height: 12),
               Expanded(
                 child: Text(
-                  name,
+                  model.name,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -109,13 +99,6 @@ class _ListEventScreenState extends State<ListEventScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Switch(
-                value: isActive,
-                activeThumbColor: Colors.cyan,
-                onChanged: (bool newValue) async {
-                  await _productService.toggleEventStatus(model.id, model, newValue);
-                },
               ),
             ],
           ),
@@ -131,15 +114,9 @@ class _ListEventScreenState extends State<ListEventScreen> {
                       "Thời gian: $dateStart - $dateEnd",
                       style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "Loại event: $eventType",
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
                   ],
                 ),
               ),
-              // Cụm 2 nút bấm
               Row(
                 children: [
                   IconButton(
@@ -169,4 +146,3 @@ class _ListEventScreenState extends State<ListEventScreen> {
     );
   }
 }
-

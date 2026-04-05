@@ -1,0 +1,9 @@
+{
+  "name": "dkpl-firestore-init",
+  "private": true,
+  "version": "1.0.0",
+  "description": "One-time Firestore init script",
+  "dependencies": {
+    "firebase-admin": "^12.5.0"
+  }
+}

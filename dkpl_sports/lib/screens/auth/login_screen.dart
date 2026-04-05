@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
+import '../../services/local_auth_service.dart';
 import '../../core/constants/app_colors.dart'; // Đổi đường dẫn nếu cần
 import '../../core/widgets/custom_button.dart';
 import '../../core/widgets/custom_textfield.dart';
@@ -8,7 +8,14 @@ import 'forgot_password_screen.dart';
 import 'package:dkpl_sports/HomePage.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool embedded;
+  final VoidCallback? onLoginSuccess;
+
+  const LoginScreen({
+    super.key,
+    this.embedded = false,
+    this.onLoginSuccess,
+  });
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -31,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     // GỌI LOGIC TỪ SERVICE (Sạch sẽ chưa?)
-    final result = await AuthService.instance.login(
+    final result = await LocalAuthService.instance.login(
       email: _emailController.text.trim(),
       password: _passController.text.trim(),
     );
@@ -40,11 +47,21 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (result.success) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const Homepage()),
-        (route) => false,
-      );
+      if (widget.embedded) {
+        widget.onLoginSuccess?.call();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Đăng nhập thành công"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const Homepage()),
+          (route) => false,
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result.message), backgroundColor: Colors.red),

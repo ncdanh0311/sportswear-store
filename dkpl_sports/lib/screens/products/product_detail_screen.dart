@@ -2,32 +2,13 @@
 import 'package:flutter/material.dart';
 import '../../models/product_model.dart';
 import '../../core/constants/app_colors.dart'; // Đổi đường dẫn import AppColors nếu cần
+import '../../core/widgets/product_image.dart';
 import '../orders/order_confirmation_screen.dart';
-
-class FakeProducts {
-  static List<ProductModel> products = List.generate(
-    6,
-    (index) => ProductModel(
-      id: "$index",
-      name: "Áo bóng đá Cristiano Ronaldo SIUU ${index + 1}",
-      description:
-          "Áo bóng đá Cristiano Ronaldo phiên bản ${index + 1}. "
-          "Chất liệu thun lạnh cao cấp, co giãn 4 chiều, thấm hút mồ hôi tốt. "
-          "Thiết kế form thể thao ôm body, logo in sắc nét, phù hợp thi đấu và mặc thường ngày. "
-          "Đường may chắc chắn, bền màu sau nhiều lần giặt.",
-      price: 99.99 + (index * 5),
-      rating: 4.3 + (index * 0.1),
-      category: "football",
-      weight: "Size XL",
-      themeColor: AppColors.primaryBlue, // Đã sửa
-      images: [
-        "assets/images/aocr7.jpg",
-        "assets/images/aocr7.jpg",
-        "assets/images/aocr7.jpg",
-      ],
-    ),
-  );
-}
+import '../../services/product_repository.dart';
+import '../../core/user_session.dart';
+import '../../services/local_cart_service.dart';
+import '../../services/local_favorites_service.dart';
+import '../chat/chat_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final ProductModel product;
@@ -41,14 +22,36 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int currentImage = 0;
   int quantity = 1;
   bool isFavorite = false;
+  final _session = UserSession();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorite();
+  }
+
+  Future<void> _loadFavorite() async {
+    final uid = _session.uid;
+    if (uid == null) return;
+    final fav = await LocalFavoritesService.instance.isFavorite(
+      uid,
+      widget.product.id,
+    );
+    if (mounted) {
+      setState(() => isFavorite = fav);
+    }
+  }
 
   List<ProductModel> get relatedProducts {
-    return FakeProducts.products
+    final allProducts = ProductRepository.cache;
+    if (allProducts.isEmpty) return [];
+    return allProducts
         .where(
           (p) =>
-              p.category == widget.product.category &&
+              p.categoryId == widget.product.categoryId &&
               p.id != widget.product.id,
         )
+        .take(8)
         .toList();
   }
 
@@ -118,7 +121,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     isFavorite ? Icons.favorite : Icons.favorite_border,
                     color: isFavorite ? Colors.red.shade300 : Colors.white,
                   ),
-                  onPressed: () => setState(() => isFavorite = !isFavorite),
+                  onPressed: _toggleFavorite,
                 ),
               ),
               const SizedBox(width: 8),
@@ -138,12 +141,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Widget _buildImageGallery(ProductModel product) {
+    final gallery = product.gallery;
     return Column(
       children: [
         SizedBox(
           height: 320,
           child: PageView.builder(
-            itemCount: product.images.length,
+            itemCount: gallery.length,
             onPageChanged: (index) => setState(() => currentImage = index),
             itemBuilder: (context, index) {
               return Padding(
@@ -162,8 +166,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(20),
-                    child: Image.asset(
-                      product.images[index],
+                    child: ProductImage(
+                      src: gallery[index],
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -173,16 +177,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        _buildIndicator(product),
+        _buildIndicator(gallery.length),
       ],
     );
   }
 
-  Widget _buildIndicator(ProductModel product) {
+  Widget _buildIndicator(int totalImages) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(
-        product.images.length,
+        totalImages,
         (index) => AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -240,11 +244,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  "(128 đánh giá)",
+                  "(${product.ratingCount} đánh giá)",
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildMetaChip(product.size),
+              _buildMetaChip("${product.sold} đã bán"),
+              _buildMetaChip("Còn ${product.quantity}"),
+            ],
           ),
           const SizedBox(height: 20),
           Row(
@@ -359,6 +373,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  Widget _buildMetaChip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textDark,
+        ),
+      ),
+    );
+  }
+
   Widget _buildBottomBar(ProductModel product) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -386,22 +418,43 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
               ), // Đã sửa
               child: IconButton(
+                icon: const Icon(
+                  Icons.chat_bubble_outline,
+                  color: AppColors.primaryBlue,
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen(product: product),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              height: 56,
+              width: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppColors.primaryBlue.withOpacity(.3),
+                  width: 1.5,
+                ),
+              ),
+              child: IconButton(
                 icon: Icon(
                   isFavorite ? Icons.favorite : Icons.favorite_border,
                   color: isFavorite ? Colors.red : AppColors.primaryBlue,
-                ), // Đã sửa
-                onPressed: () => setState(() => isFavorite = !isFavorite),
+                ),
+                onPressed: _toggleFavorite,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: GestureDetector(
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Đã thêm vào giỏ hàng!"),
-                    duration: Duration(seconds: 2),
-                  ),
-                ),
+                onTap: _handleAddToCart,
                 child: Container(
                   height: 56,
                   decoration: BoxDecoration(
@@ -426,11 +479,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             Expanded(
               child: GestureDetector(
                 onTap: () {
+                  final variant = product.defaultVariant;
+                  if (variant.id.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Sản phẩm chưa có phân loại hợp lệ'),
+                      ),
+                    );
+                    return;
+                  }
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => OrderConfirmationScreen(
+                      builder: (_) => OrderConfirmationScreen.single(
                         product: product,
+                        variant: variant,
                         quantity: quantity,
                       ),
                     ),
@@ -471,6 +534,57 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ),
       ),
     );
+  }
+  Future<void> _handleAddToCart() async {
+    final uid = _session.uid;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui l?ng ��ng nh?p �? th�m v�o gi? h�ng'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    final variant = widget.product.defaultVariant;
+    if (variant.id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sản phẩm chưa có phân loại hợp lệ'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    await LocalCartService.instance.addToCart(
+      uid: uid,
+      variantId: variant.id,
+      quantity: quantity,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('�? th�m v�o gi? h�ng!'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _toggleFavorite() async {
+    final uid = _session.uid;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui l?ng ��ng nh?p �? th�m y�u th�ch'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    await LocalFavoritesService.instance.toggleFavorite(
+      uid: uid,
+      productId: widget.product.id,
+    );
+    setState(() => isFavorite = !isFavorite);
   }
 }
 
@@ -513,7 +627,7 @@ class _RelatedCard extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.asset(product.images.first, fit: BoxFit.contain),
+                child: ProductImage(src: product.image, fit: BoxFit.contain),
               ),
             ),
             Padding(
@@ -548,3 +662,5 @@ class _RelatedCard extends StatelessWidget {
     );
   }
 }
+
+

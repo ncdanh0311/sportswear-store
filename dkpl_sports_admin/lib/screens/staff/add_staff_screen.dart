@@ -1,4 +1,3 @@
-// File: lib/screens/add_staff_screen.dart
 import 'package:flutter/material.dart';
 import 'package:dkpl_sports_admin/services/auth_service.dart';
 import 'package:dkpl_sports_admin/core/widgets/base_background.dart';
@@ -22,12 +21,10 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
+  final _cccdCtrl = TextEditingController();
 
   final _dobCtrl = TextEditingController();
   DateTime? _selectedDOB;
-
-  final _joinDateCtrl = TextEditingController(); // <--- Controller Ngày vào làm
-  DateTime? _selectedJoinDate;
 
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController(text: "dkpl123456");
@@ -44,13 +41,12 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
 
   String _selectedRoleLabel = 'Nhân viên bán hàng (Sales)';
 
-  // Hàm chọn ngày sinh
   Future<void> _pickDateOfBirth() async {
     DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime(2000),
       firstDate: DateTime(1960),
-      lastDate: DateTime.now().subtract(const Duration(days: 365 * 16)), // Yêu cầu >= 16 tuổi
+      lastDate: DateTime.now().subtract(const Duration(days: 365 * 16)),
     );
 
     if (picked != null) {
@@ -62,35 +58,17 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
     }
   }
 
-  // Hàm chọn ngày vào làm
-  Future<void> _pickJoinDate() async {
-    DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(), // Mặc định mở ra là ngày hôm nay
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-
-    if (picked != null) {
-      setState(() {
-        _selectedJoinDate = picked;
-        _joinDateCtrl.text =
-            "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
-      });
-    }
-  }
-
   Future<void> _handleCreateStaff() async {
     if (_nameCtrl.text.isEmpty ||
         _emailCtrl.text.isEmpty ||
         _phoneCtrl.text.isEmpty ||
         _addressCtrl.text.isEmpty ||
         _dobCtrl.text.isEmpty ||
-        _joinDateCtrl.text.isEmpty ||
+        _cccdCtrl.text.isEmpty ||
         _passwordCtrl.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin nhân sự!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin nhân sự!')),
+      );
       return;
     }
 
@@ -102,10 +80,10 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
       email: _emailCtrl.text,
       phone: _phoneCtrl.text,
       address: _addressCtrl.text,
-      dateOfBirth: _dobCtrl.text,
-      joinDate: _joinDateCtrl.text, // <--- Truyền dữ liệu xuống
+      dob: _dobCtrl.text,
+      cccd: _cccdCtrl.text,
       password: _passwordCtrl.text,
-      role: roleValue,
+      roleId: roleValue,
     );
 
     if (!mounted) return;
@@ -141,7 +119,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
   @override
   Widget build(BuildContext context) {
     final canManageStaff =
-        RolePermissions.canManageStaff(AuthService.instance.currentUser?.role);
+        RolePermissions.canManageStaff(AuthService.instance.currentUser?.roleId);
 
     if (!canManageStaff && !widget.bootstrapMode) {
       return BaseBackground(
@@ -181,26 +159,18 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                           keyboardType: TextInputType.phone,
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ProductDatePickerField(
-                                label: "Ngày sinh",
-                                controller: _dobCtrl,
-                                hint: "Chọn ngày",
-                                onTap: _pickDateOfBirth,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ProductDatePickerField(
-                                label: "Ngày vào làm",
-                                controller: _joinDateCtrl,
-                                hint: "Chọn ngày",
-                                onTap: _pickJoinDate,
-                              ),
-                            ),
-                          ],
+                        ProductDatePickerField(
+                          label: "Ngày sinh",
+                          controller: _dobCtrl,
+                          hint: "Chọn ngày",
+                          onTap: _pickDateOfBirth,
+                        ),
+                        const SizedBox(height: 16),
+                        ProductTextField(
+                          label: "CCCD",
+                          controller: _cccdCtrl,
+                          hint: "Số CCCD",
+                          keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: 16),
                         ProductTextField(
@@ -255,4 +225,3 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
     );
   }
 }
-

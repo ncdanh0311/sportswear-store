@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../core/user_session.dart';
+import '../core/constants/firebase_collections.dart';
 
 class ProfileService {
   ProfileService._();
@@ -16,7 +17,10 @@ class ProfileService {
   Future<String?> updateProfile(Map<String, dynamic> dataToUpdate) async {
     try {
       String uid = UserSession().uid!;
-      await _firestore.collection('users').doc(uid).update(dataToUpdate);
+      await _firestore
+          .collection(FirebaseCollections.users)
+          .doc(uid)
+          .update(dataToUpdate);
       UserSession().updateUser(dataToUpdate);
       return null; // Trả về null nghĩa là không có lỗi
     } catch (e) {
@@ -33,7 +37,10 @@ class ProfileService {
       await storageRef.putFile(imageFile);
       String downUrl = await storageRef.getDownloadURL();
 
-      await _firestore.collection("users").doc(uid).update({'avatar': downUrl});
+      await _firestore
+          .collection(FirebaseCollections.users)
+          .doc(uid)
+          .update({'avatar': downUrl});
       UserSession().updateUser({'avatar': downUrl});
 
       return null; // Không có lỗi

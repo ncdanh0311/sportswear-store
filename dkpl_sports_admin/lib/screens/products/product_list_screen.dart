@@ -15,9 +15,6 @@ import 'add_product_screen.dart';
 import 'edit_product_screen.dart';
 import 'manage_variants_screen.dart';
 
-// =========================================================================
-// MÀN HÌNH DANH SÁCH SẢN PHẨM CHÍNH TỪ FIREBASE
-// =========================================================================
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({Key? key}) : super(key: key);
 
@@ -27,7 +24,7 @@ class ProductListScreen extends StatefulWidget {
 
 class _ProductListScreenState extends State<ProductListScreen> {
   final ProductService _productService = ProductService();
-  String get _role => AuthService.instance.currentUser?.role ?? '';
+  String get _role => AuthService.instance.currentUser?.roleId ?? '';
   bool get _canManageProducts => RolePermissions.canManageProducts(_role);
   bool get _canManageVariants => RolePermissions.canManageVariants(_role);
 
@@ -172,7 +169,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${model.categoryId} • ${model.variantsCount} biến thể',
+                  'Category: ${model.categoryId}',
                   style: const TextStyle(fontSize: 12, color: Colors.white54),
                 ),
               ],
@@ -185,7 +182,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 value: isActive,
                 activeColor: AppColors.accentCyan,
                 onChanged: _canManageProducts
-                    ? (val) => _productService.updateProduct(model.id, {'is_active': val})
+                    ? (val) => _productService.updateProduct(model.id, {'isActive': val})
                     : null,
               ),
               Row(
@@ -228,4 +225,3 @@ class _ProductListScreenState extends State<ProductListScreen> {
     );
   }
 }
-

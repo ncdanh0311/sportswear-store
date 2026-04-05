@@ -13,7 +13,6 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
 
   String _selectedGender = 'Nam';
   DateTime? _selectedDob;
@@ -25,7 +24,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final session = UserSession();
     _nameController.text = session.fullName ?? '';
     _phoneController.text = session.phone ?? '';
-    _addressController.text = session.address ?? '';
     if (session.gender != null && session.gender!.isNotEmpty)
       _selectedGender = session.gender!;
     _selectedDob = session.dob;
@@ -56,9 +54,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isLoading = true);
 
     Map<String, dynamic> dataToUpdate = {
-      'full_name': _nameController.text.trim(),
+      'fullName': _nameController.text.trim(),
       'phone': _phoneController.text.trim(),
-      'address': _addressController.text.trim(),
       'gender': _selectedGender,
       'dob': _selectedDob?.toIso8601String(),
     };
@@ -110,12 +107,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   _phoneController,
                   Icons.phone,
                   isNumber: true,
-                ),
-                const SizedBox(height: 15),
-                _buildTextField(
-                  "Địa chỉ",
-                  _addressController,
-                  Icons.location_on,
                 ),
                 const SizedBox(height: 15),
                 _buildGenderDropdown(),

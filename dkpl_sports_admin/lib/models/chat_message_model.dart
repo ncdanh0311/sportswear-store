@@ -1,17 +1,41 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'model_utils.dart';
+
 class ChatMessageModel {
-  final String text;
+  final String id;
+  final String senderId;
+  final String receiverId;
+  final String content;
+  final DateTime? createdAt;
+
   final bool isOutgoing;
   final String time;
-  final bool showProduct;
-  final bool showVipBadge;
-  final bool isTyping;
 
   const ChatMessageModel({
-    required this.text,
+    required this.id,
+    required this.senderId,
+    required this.receiverId,
+    required this.content,
+    required this.createdAt,
     required this.isOutgoing,
     required this.time,
-    this.showProduct = false,
-    this.showVipBadge = false,
-    this.isTyping = false,
   });
+
+  factory ChatMessageModel.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> doc, {
+    required String currentUserId,
+    required String timeLabel,
+  }) {
+    final data = doc.data() ?? {};
+    final senderId = ModelUtils.readString(data['senderId']);
+    return ChatMessageModel(
+      id: doc.id,
+      senderId: senderId,
+      receiverId: ModelUtils.readString(data['receiverId']),
+      content: ModelUtils.readString(data['content']),
+      createdAt: ModelUtils.readDateTime(data['createdAt']),
+      isOutgoing: senderId == currentUserId,
+      time: timeLabel,
+    );
+  }
 }

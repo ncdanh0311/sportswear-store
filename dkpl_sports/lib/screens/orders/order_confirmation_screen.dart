@@ -1,8 +1,14 @@
 // File: lib/screens/orders/order_confirmation_screen.dart (hoặc đường dẫn tương ứng)
 import 'package:flutter/material.dart';
 import '../../models/product_model.dart';
+import '../../models/product_variant_model.dart';
 import '../../core/constants/app_colors.dart'; // Đổi đường dẫn nếu cần
-import '../../core/user_session.dart'; // Import để lấy thông tin Khách hàng thật
+import '../../core/widgets/product_image.dart';
+import '../../core/user_session.dart';
+import '../../services/local_order_service.dart'; // Import để lấy thông tin Khách hàng thật
+import '../../HomePage.dart';
+import '../../services/local_cart_service.dart';
+import '../../services/local_address_service.dart';
 
 class VoucherModel {
   final String id;
@@ -23,14 +29,35 @@ class VoucherModel {
   });
 }
 
-class OrderConfirmationScreen extends StatefulWidget {
+class OrderItem {
   final ProductModel product;
+  final ProductVariantModel variant;
   final int quantity;
-  const OrderConfirmationScreen({
-    super.key,
+  OrderItem({
     required this.product,
+    required this.variant,
     required this.quantity,
   });
+}
+
+class OrderConfirmationScreen extends StatefulWidget {
+  final List<OrderItem> items;
+  final List<String> cartVariantIdsToClear;
+  const OrderConfirmationScreen({
+    super.key,
+    required this.items,
+    this.cartVariantIdsToClear = const [],
+  });
+
+  factory OrderConfirmationScreen.single({
+    required ProductModel product,
+    required ProductVariantModel variant,
+    required int quantity,
+  }) {
+    return OrderConfirmationScreen(
+      items: [OrderItem(product: product, variant: variant, quantity: quantity)],
+    );
+  }
 
   @override
   State<OrderConfirmationScreen> createState() =>
@@ -45,6 +72,8 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
 
   String selectedShipping = 'standard';
   VoucherModel? selectedVoucher;
+  String selectedPayment = 'cod';
+  bool setDefaultAddress = false;
 
   final List<Map<String, dynamic>> shippingOptions = [
     {
@@ -67,6 +96,24 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
       'time': 'Trong ngày',
       'price': 9.99,
       'icon': Icons.rocket_launch,
+    },
+  ];
+
+  final List<Map<String, dynamic>> paymentOptions = [
+    {
+      'id': 'cod',
+      'name': 'Thanh toán khi nhận hàng (COD)',
+      'icon': Icons.payments_outlined,
+    },
+    {
+      'id': 'bank',
+      'name': 'Chuyển khoản ngân hàng',
+      'icon': Icons.account_balance,
+    },
+    {
+      'id': 'momo',
+      'name': 'Ví điện tử',
+      'icon': Icons.account_balance_wallet_outlined,
     },
   ];
 
@@ -107,7 +154,19 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
     final session = UserSession();
     nameController.text = session.fullName ?? "Khách hàng mới";
     phoneController.text = session.phone ?? "";
-    addressController.text = session.address ?? "";
+    _loadDefaultAddress();
+  }
+
+  Future<void> _loadDefaultAddress() async {
+    final uid = UserSession().uid;
+    if (uid == null) return;
+    final addr = await LocalAddressService.instance.getDefaultAddress(uid);
+    if (addr == null) return;
+    if (!mounted) return;
+    nameController.text = (addr['fullName'] ?? nameController.text).toString();
+    phoneController.text = (addr['phone'] ?? phoneController.text).toString();
+    addressController.text =
+        (addr['detail'] ?? addressController.text).toString();
   }
 
   @override
@@ -119,7 +178,13 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
     super.dispose();
   }
 
-  double get subtotal => widget.product.price * widget.quantity;
+  double get subtotal {
+    double total = 0;
+    for (final item in widget.items) {
+      total += item.variant.price * item.quantity;
+    }
+    return total;
+  }
   double get shippingFee {
     if (selectedVoucher?.type == 'shipping') return 0;
     return shippingOptions.firstWhere(
@@ -163,6 +228,8 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
             const SizedBox(height: 12),
             _buildShippingOptions(),
             const SizedBox(height: 12),
+            _buildPaymentMethods(),
+            const SizedBox(height: 12),
             _buildVoucherSection(),
             const SizedBox(height: 12),
             _buildNoteSection(),
@@ -193,62 +260,79 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.grey.shade100,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                widget.product.images.first,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.product.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
+              children: widget.items.map((item) {
+                final product = item.product;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.grey.shade100,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: ProductImage(
+                            src: product.image,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              product.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              item.variant.size,
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '\$${item.variant.price.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: AppColors.primaryBlue,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                Text(
+                                  'x${item.quantity}',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.product.weight,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '\$${widget.product.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: AppColors.primaryBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ), // Đã sửa
-                    Text(
-                      'x${widget.quantity}',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                );
+              }).toList(),
             ),
           ),
         ],
@@ -334,6 +418,22 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
                 vertical: 12,
               ),
             ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Checkbox(
+                value: setDefaultAddress,
+                onChanged: (value) {
+                  setState(() => setDefaultAddress = value ?? false);
+                },
+                activeColor: AppColors.primaryBlue,
+              ),
+              const Text(
+                'Đặt làm địa chỉ mặc định',
+                style: TextStyle(color: AppColors.textLight),
+              ),
+            ],
           ),
         ],
       ),
@@ -436,6 +536,94 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
                         fontSize: 15,
                       ),
                     ), // Đã sửa
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethods() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.payments_outlined,
+                color: AppColors.primaryBlue,
+                size: 22,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Hình thức thanh toán',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...paymentOptions.map((option) {
+            final isSelected = selectedPayment == option['id'];
+            return GestureDetector(
+              onTap: () => setState(() => selectedPayment = option['id']),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.primaryBlue
+                        : Colors.grey.shade300,
+                    width: isSelected ? 2 : 1,
+                  ),
+                  color: isSelected
+                      ? AppColors.primaryBlue.withOpacity(.05)
+                      : Colors.transparent,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      option['icon'],
+                      color: isSelected
+                          ? AppColors.primaryBlue
+                          : Colors.grey.shade600,
+                      size: 26,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        option['name'],
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: isSelected
+                              ? AppColors.primaryBlue
+                              : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    if (isSelected)
+                      const Icon(
+                        Icons.check_circle,
+                        color: AppColors.primaryBlue,
+                      ),
                   ],
                 ),
               ),
@@ -942,7 +1130,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
     );
   }
 
-  void _handlePlaceOrder() {
+  Future<void> _handlePlaceOrder() async {
     if (nameController.text.isEmpty) {
       _showSnackBar('Vui lòng nhập họ tên');
       return;
@@ -956,8 +1144,64 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
       return;
     }
 
+    final session = UserSession();
+    final uid = session.uid;
+    if (uid != null) {
+      final addressId = 'addr_${DateTime.now().millisecondsSinceEpoch}';
+      await LocalAddressService.instance.addAddress(
+        uid: uid,
+        address: {
+          'id': addressId,
+          'fullName': nameController.text.trim(),
+          'phone': phoneController.text.trim(),
+          'detail': addressController.text.trim(),
+          'isDefault': setDefaultAddress,
+        },
+      );
+      if (setDefaultAddress) {
+        await LocalAddressService.instance.setDefault(
+          uid: uid,
+          addressId: addressId,
+        );
+      }
+
+      final items = widget.items
+          .map(
+            (item) => {
+              'variantId': item.variant.id,
+              'price': item.variant.price,
+              'quantity': item.quantity,
+            },
+          )
+          .toList();
+
+      final order = {
+        'id': 'order_${DateTime.now().millisecondsSinceEpoch}',
+        'userId': uid,
+        'addressId': addressId,
+        'total': total,
+        'status': 'pending',
+        'paymentMethod': selectedPayment,
+        'expectedDelivery': null,
+        'createdAt': DateTime.now().toIso8601String(),
+        'items': items,
+      };
+
+      await LocalOrderService.instance.addOrder(uid: uid, order: order);
+
+      if (widget.cartVariantIdsToClear.isNotEmpty) {
+        for (final variantId in widget.cartVariantIdsToClear) {
+          await LocalCartService.instance.removeFromCart(
+            uid: uid,
+            variantId: variantId,
+          );
+        }
+      }
+    }
+
+    final rootContext = context;
     showDialog(
-      context: context,
+      context: rootContext,
       builder: (context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
@@ -990,9 +1234,11 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pop();
+                    Navigator.of(rootContext, rootNavigator: true).pop();
+                    Navigator.of(rootContext).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const Homepage()),
+                      (route) => false,
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryBlue,
@@ -1028,3 +1274,6 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
     );
   }
 }
+
+
+
