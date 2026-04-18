@@ -41,4 +41,19 @@ class ModelUtils {
     }
     return fallback;
   }
+
+  static String formatVnd(num value) {
+    final isNegative = value < 0;
+    final intValue = value.abs().round();
+    final raw = intValue.toString();
+    final buffer = StringBuffer();
+    for (int i = 0; i < raw.length; i++) {
+      buffer.write(raw[i]);
+      final remaining = raw.length - i - 1;
+      if (remaining > 0 && remaining % 3 == 0) {
+        buffer.write('.');
+      }
+    }
+    return '${isNegative ? '-' : ''}${buffer.toString()} VNĐ';
+  }
 }

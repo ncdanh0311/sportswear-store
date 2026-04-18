@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../models/product_model.dart';
 import '../../models/product_variant_model.dart';
+import '../../models/model_utils.dart';
 import '../../core/constants/app_colors.dart'; // Đổi đường dẫn nếu cần
 import '../../core/widgets/product_image.dart';
 import '../../core/user_session.dart';
@@ -122,27 +123,27 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
       id: '1',
       code: 'NEWUSER10',
       title: 'Giảm 10% cho đơn hàng đầu',
-      description: 'Áp dụng cho đơn hàng từ \$50',
+      description: 'Áp dụng cho đơn hàng từ 50.000 đ',
       discount: 10,
-      minOrder: 50,
+      minOrder: 50000,
       type: 'percent',
     ),
     VoucherModel(
       id: '2',
       code: 'FREESHIP',
       title: 'Miễn phí vận chuyển',
-      description: 'Áp dụng cho đơn hàng từ \$30',
+      description: 'Áp dụng cho đơn hàng từ 30.000 đ',
       discount: 0,
-      minOrder: 30,
+      minOrder: 30000,
       type: 'shipping',
     ),
     VoucherModel(
       id: '3',
       code: 'SAVE5',
-      title: 'Giảm \$5',
-      description: 'Áp dụng cho đơn hàng từ \$25',
-      discount: 5,
-      minOrder: 25,
+      title: 'Giảm 5.000 đ',
+      description: 'Áp dụng cho đơn hàng từ 25.000 đ',
+      discount: 5000,
+      minOrder: 25000,
       type: 'fixed',
     ),
   ];
@@ -310,7 +311,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  '\$${item.variant.price.toStringAsFixed(2)}',
+                                  ModelUtils.formatVnd(item.variant.price),
                                   style: const TextStyle(
                                     color: AppColors.primaryBlue,
                                     fontWeight: FontWeight.bold,
@@ -527,7 +528,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
                       ),
                     ),
                     Text(
-                      '\$${option['price'].toStringAsFixed(2)}',
+                      ModelUtils.formatVnd(option['price'] ?? 0),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: isSelected
@@ -725,7 +726,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
                   ),
                 ),
                 Text(
-                  'Giảm ${selectedVoucher!.type == 'percent' ? '${selectedVoucher!.discount}%' : '\$${selectedVoucher!.discount}'}',
+                  'Giảm ${selectedVoucher!.type == 'percent' ? '${selectedVoucher!.discount}%' : ModelUtils.formatVnd(selectedVoucher!.discount)}',
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
               ],
@@ -844,13 +845,13 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 16),
-          _buildPriceRow('Tạm tính', '\$${subtotal.toStringAsFixed(2)}', false),
+          _buildPriceRow('Tạm tính', ModelUtils.formatVnd(subtotal), false),
           const SizedBox(height: 12),
           _buildPriceRow(
             'Phí vận chuyển',
             selectedVoucher?.type == 'shipping'
                 ? 'Miễn phí'
-                : '\$${shippingFee.toStringAsFixed(2)}',
+                : ModelUtils.formatVnd(shippingFee),
             false,
             strikethrough: selectedVoucher?.type == 'shipping',
           ),
@@ -858,14 +859,14 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
           if (voucherDiscount > 0)
             _buildPriceRow(
               'Giảm giá',
-              '-\$${voucherDiscount.toStringAsFixed(2)}',
+              ModelUtils.formatVnd(-voucherDiscount),
               false,
               isDiscount: true,
             ),
           if (voucherDiscount > 0) const SizedBox(height: 12),
           const Divider(),
           const SizedBox(height: 12),
-          _buildPriceRow('Tổng cộng', '\$${total.toStringAsFixed(2)}', true),
+          _buildPriceRow('Tổng cộng', ModelUtils.formatVnd(total), true),
         ],
       ),
     );
@@ -931,7 +932,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                 ),
                 Text(
-                  '\$${total.toStringAsFixed(2)}',
+                  ModelUtils.formatVnd(total),
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -1274,6 +1275,12 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
     );
   }
 }
+
+
+
+
+
+
 
 
 

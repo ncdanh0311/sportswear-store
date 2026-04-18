@@ -28,14 +28,7 @@ class CategoryModel {
   final double pct;
   final Color color;
 
-  const CategoryModel(
-    this.name,
-    this.emoji,
-    this.sold,
-    this.revenue,
-    this.pct,
-    this.color,
-  );
+  const CategoryModel(this.name, this.emoji, this.sold, this.revenue, this.pct, this.color);
 }
 
 class TopProductModel {
@@ -46,12 +39,5 @@ class TopProductModel {
   final int sold;
   final String revenue;
 
-  const TopProductModel(
-    this.rank,
-    this.name,
-    this.emoji,
-    this.sold,
-    this.variants,
-    this.revenue,
-  );
+  const TopProductModel(this.rank, this.name, this.emoji, this.sold, this.variants, this.revenue);
 }

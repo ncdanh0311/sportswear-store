@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/user_session.dart';
 import '../../core/widgets/product_image.dart';
 import '../../models/product_model.dart';
+import '../../models/model_utils.dart';
 
 class ChatScreen extends StatefulWidget {
   final ProductModel? product;
@@ -28,6 +30,7 @@ class _ChatMessage {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   late List<_ChatMessage> _messages;
+  final _session = UserSession();
 
   @override
   void initState() {
@@ -72,9 +75,15 @@ class _ChatScreenState extends State<ChatScreen> {
         elevation: 0,
         title: Row(
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 18,
-              backgroundImage: AssetImage('assets/images/avatar.jpg'),
+              backgroundImage: (() {
+                final avatar = _session.avatar?.trim() ?? '';
+                if (avatar.isNotEmpty) {
+                  return NetworkImage(avatar);
+                }
+                return const AssetImage('assets/images/avatar.jpg');
+              })() as ImageProvider<Object>,
             ),
             const SizedBox(width: 10),
             Column(
@@ -164,7 +173,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '\$${product.price.toStringAsFixed(2)}',
+                  ModelUtils.formatVnd(product.price),
                   style: const TextStyle(
                     color: AppColors.primaryBlue,
                     fontWeight: FontWeight.bold,
@@ -261,3 +270,5 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 }
+
+

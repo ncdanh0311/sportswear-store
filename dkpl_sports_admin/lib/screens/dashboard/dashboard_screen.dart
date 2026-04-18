@@ -44,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return BaseBackground(
         appBar: AppBar(
           title: const Text('Báo Cáo Doanh Thu'),
+          backgroundColor: Colors.transparent,
         ),
         child: const Center(
           child: Text(
@@ -57,6 +58,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return BaseBackground(
       appBar: AppBar(
         title: const Text('Báo Cáo Doanh Thu'),
+        backgroundColor: Colors.transparent,
         actions: [
           IconButton(
             icon: const Icon(Icons.ios_share_rounded),

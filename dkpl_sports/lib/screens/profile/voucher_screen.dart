@@ -33,13 +33,13 @@ class VoucherScreen extends StatelessWidget {
     return [
       {
         'title': 'Giảm 10% cho đơn đầu',
-        'subtitle': 'Áp dụng đơn từ \$50',
+        'subtitle': 'Áp dụng đơn từ 50.000 đ',
         'code': 'NEW10',
         'active': true,
       },
       {
         'title': 'Freeship nội thành',
-        'subtitle': 'Đơn từ \$30',
+        'subtitle': 'Đơn từ 30.000 đ',
         'code': 'SHIP30',
         'active': true,
       },
@@ -142,3 +142,5 @@ class _VoucherCard extends StatelessWidget {
     );
   }
 }
+
+

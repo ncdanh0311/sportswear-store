@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../../core/user_session.dart';
 import '../../core/constants/app_colors.dart';
-import '../../services/auth_service.dart';
 import '../../services/local_auth_service.dart';
 import '../../services/local_order_service.dart';
 import '../orders/order_history_screen.dart';
@@ -155,7 +154,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         iconColor: Colors.red,
                         onTap: () async {
                           await LocalAuthService.instance.logout();
-                          await AuthService.instance.logout();
                           widget.onLoggedOut?.call();
                           if (!widget.embedded && mounted) {
                             Navigator.pop(context);

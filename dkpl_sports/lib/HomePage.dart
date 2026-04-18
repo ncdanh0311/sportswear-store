@@ -1,17 +1,17 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../core/constants/app_colors.dart';
+import 'core/constants/app_colors.dart';
 import 'core/user_session.dart';
 import 'core/widgets/category_card.dart';
 import 'core/widgets/product_card.dart';
 import 'models/category_model.dart';
 import 'models/product_model.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/chat/chat_list_screen.dart';
 import 'screens/orders/cart_page.dart';
 import 'screens/products/search_page.dart';
 import 'screens/profile/favorites_page.dart';
 import 'screens/profile/profile_screen.dart';
-import 'screens/chat/chat_list_screen.dart';
 import 'services/product_repository.dart';
 
 class Homepage extends StatefulWidget {
@@ -178,11 +178,13 @@ class _HomepageState extends State<Homepage> {
                     child: CircleAvatar(
                       radius: 18,
                       backgroundColor: AppColors.primaryBlue.withOpacity(.1),
-                      backgroundImage: NetworkImage(
-                        isLogin
-                            ? 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRD0Y5uEmFetc0Xb25SAiiO4ZwYE8g7r8HBug&s'
-                            : 'https://i.pinimg.com/736x/8f/1c/a2/8f1ca2029e2efceebd22fa05cca423d7.jpg',
-                      ),
+                      backgroundImage: (() {
+                        final avatar = UserSession().avatar?.trim() ?? '';
+                        if (isLogin && avatar.isNotEmpty) {
+                          return NetworkImage(avatar);
+                        }
+                        return const AssetImage('assets/images/avatar.jpg');
+                      })() as ImageProvider<Object>,
                     ),
                   ),
                 ),

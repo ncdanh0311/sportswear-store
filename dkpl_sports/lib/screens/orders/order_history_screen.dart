@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/product_image.dart';
 import '../../core/user_session.dart';
+import '../../models/model_utils.dart';
 import '../../services/local_order_service.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
@@ -119,7 +120,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '\$${(order['total'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
+                            ModelUtils.formatVnd((order['total'] as num?) ?? 0),
                             style: const TextStyle(
                               color: AppColors.primaryBlue,
                               fontWeight: FontWeight.bold,
@@ -169,3 +170,4 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     );
   }
 }
+

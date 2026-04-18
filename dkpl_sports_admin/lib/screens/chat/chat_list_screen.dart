@@ -23,7 +23,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     return BaseBackground(
       appBar: AppBar(
-        title: const Text('Hộp thoại'),
+        title: const Text('Hộp thoại', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
       ),
       child: StreamBuilder<List<ChatConversationModel>>(

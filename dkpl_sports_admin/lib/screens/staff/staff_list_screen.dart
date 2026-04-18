@@ -1,4 +1,6 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+﻿// ignore_for_file: unnecessary_underscores
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import 'package:dkpl_sports_admin/core/constants/app_colors.dart';
@@ -28,23 +30,24 @@ class _StaffListScreenState extends State<StaffListScreen> {
 
     if (currentUser?.id == staff.id) {
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Khong the xoa chinh tai khoan dang dang nhap.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Không thể xóa chính tài khoản đăng nhập!')));
       return false;
     }
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xoa nhan su'),
-        content: Text('Ban co chac muon xoa "${staff.fullName}" khong?'),
+        title: const Text('Xóa nhân sự'),
+        content: Text('Bạn có chắc muốn xóa "${staff.fullName}" không?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Huy')),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Xoa')),
         ],
       ),
     );
+    
 
     if (confirmed != true) return false;
 
@@ -52,34 +55,29 @@ class _StaffListScreenState extends State<StaffListScreen> {
       await FirebaseFirestore.instance.collection('staff').doc(staff.id).delete();
 
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Da xoa tai khoan nhan su.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa tài khoản')));
       return true;
     } catch (e) {
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Xoa that bai: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Xóa thất bại: $e')));
       return false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final canManageStaff =
-        RolePermissions.canManageStaff(AuthService.instance.currentUser?.roleId);
+    final canManageStaff = RolePermissions.canManageStaff(AuthService.instance.currentUser?.roleId);
     final staffRef = FirebaseFirestore.instance.collection('staff');
 
     if (!canManageStaff) {
       return BaseBackground(
         appBar: AppBar(
-          title: const Text('Quan ly nhan su', style: AppStyles.h2),
+          title: const Text('Quản lý nhân sự', style: AppStyles.h2),
           backgroundColor: Colors.transparent,
         ),
         child: const Center(
           child: Text(
-            'Ban khong co quyen quan ly nhan su.',
+            'Bạn không có quyền quản lý nhân sự',
             style: TextStyle(color: Colors.white70),
           ),
         ),
@@ -88,7 +86,7 @@ class _StaffListScreenState extends State<StaffListScreen> {
 
     return BaseBackground(
       appBar: AppBar(
-        title: const Text('Quan ly nhan su', style: AppStyles.h2),
+        title: const Text('Quản lý nhân sự', style: AppStyles.h2),
         backgroundColor: Colors.transparent,
       ),
       child: StreamBuilder<QuerySnapshot>(
@@ -216,7 +214,7 @@ class _StaffItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  staff.fullName.isEmpty ? 'Chua co ten' : staff.fullName,
+                  staff.fullName.isEmpty ? 'Chưa có tên' : staff.fullName,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -226,7 +224,10 @@ class _StaffItem extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(staff.email, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                 const SizedBox(height: 2),
-                Text('Phone: ${staff.phone}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                Text(
+                  'Phone: ${staff.phone}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   'DOB: ${staff.dob ?? '---'}',

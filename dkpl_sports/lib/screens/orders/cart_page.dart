@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/product_image.dart';
 import '../../core/user_session.dart';
+import '../../models/model_utils.dart';
 import '../../models/product_model.dart';
 import '../../models/product_variant_model.dart';
 import '../../services/local_cart_service.dart';
@@ -42,9 +43,7 @@ class _CartPageState extends State<CartPage> {
     return map;
   }
 
-  Map<String, ProductModel> _buildProductMap(
-    List<ProductModel> products,
-  ) {
+  Map<String, ProductModel> _buildProductMap(List<ProductModel> products) {
     final map = <String, ProductModel>{};
     for (final product in products) {
       for (final variant in product.variants) {
@@ -162,7 +161,8 @@ class _CartPageState extends State<CartPage> {
                     final item = cart[index];
                     final id = item['variantId'];
                     final qty = (item['quantity'] as num?)?.toInt() ?? 1;
-                    final product = productMap[id.toString()] ??
+                    final product =
+                        productMap[id.toString()] ??
                         ProductModel(
                           id: '',
                           name: 'Sản phẩm không tồn tại',
@@ -182,8 +182,7 @@ class _CartPageState extends State<CartPage> {
                           variants: const [],
                         );
                     final variant = variantMap[id.toString()];
-                    final isSelected =
-                        _selectedIds.contains(variant?.id ?? '');
+                    final isSelected = _selectedIds.contains(variant?.id ?? '');
                     return _CartItemCard(
                       product: product,
                       variant: variant,
@@ -204,9 +203,8 @@ class _CartPageState extends State<CartPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => ProductDetailScreen(
-                              product: product,
-                            ),
+                            builder: (_) =>
+                                ProductDetailScreen(product: product),
                           ),
                         );
                       },
@@ -240,9 +238,7 @@ class _CartPageState extends State<CartPage> {
                 onCheckout: () {
                   if (_selectedIds.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Hãy chọn sản phẩm để mua'),
-                      ),
+                      const SnackBar(content: Text('Hãy chọn sản phẩm để mua')),
                     );
                     return;
                   }
@@ -254,11 +250,13 @@ class _CartPageState extends State<CartPage> {
                     final product = productMap[id.toString()];
                     final variant = variantMap[id.toString()];
                     if (product != null && variant != null) {
-                      items.add(OrderItem(
-                        product: product,
-                        variant: variant,
-                        quantity: qty,
-                      ));
+                      items.add(
+                        OrderItem(
+                          product: product,
+                          variant: variant,
+                          quantity: qty,
+                        ),
+                      );
                     }
                   }
                   if (items.isEmpty) return;
@@ -267,8 +265,9 @@ class _CartPageState extends State<CartPage> {
                     MaterialPageRoute(
                       builder: (_) => OrderConfirmationScreen(
                         items: items,
-                        cartVariantIdsToClear:
-                            _selectedIds.map((e) => e.toString()).toList(),
+                        cartVariantIdsToClear: _selectedIds
+                            .map((e) => e.toString())
+                            .toList(),
                       ),
                     ),
                   );
@@ -339,18 +338,18 @@ class _CartItemCard extends StatelessWidget {
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(14),
               ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: ProductImage(
-                        src: product.image,
-                        fit: BoxFit.contain,
-                      ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: ProductImage(
+                      src: product.image,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -379,7 +378,7 @@ class _CartItemCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    "\$${(variant?.price ?? 0).toStringAsFixed(2)}",
+                    ModelUtils.formatVnd(variant?.price ?? 0),
                     style: const TextStyle(
                       color: AppColors.primaryBlue,
                       fontWeight: FontWeight.bold,
@@ -469,7 +468,7 @@ class _CartSummary extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '\$${total.toStringAsFixed(2)}',
+                    ModelUtils.formatVnd(total),
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,

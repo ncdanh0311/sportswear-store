@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/product_image.dart';
 import '../../core/user_session.dart';
+import '../../models/model_utils.dart';
 import '../../services/local_order_service.dart';
 
 class OrderStatusScreen extends StatelessWidget {
@@ -142,7 +143,7 @@ class OrderStatusScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'x${item['quantity']}  •  \$${(item['price'] as num).toStringAsFixed(2)}',
+                                        'x${item['quantity']}  •  ${ModelUtils.formatVnd((item['price'] as num?) ?? 0)}',
                                         style: const TextStyle(
                                           color: AppColors.textLight,
                                           fontSize: 12,
@@ -172,7 +173,7 @@ class OrderStatusScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Tổng: \$${(order['total'] as num).toStringAsFixed(2)}',
+                            'Tổng: ${ModelUtils.formatVnd((order['total'] as num?) ?? 0)}',
                             style: const TextStyle(
                               color: AppColors.primaryBlue,
                               fontWeight: FontWeight.bold,
@@ -188,3 +189,4 @@ class OrderStatusScreen extends StatelessWidget {
     );
   }
 }
+

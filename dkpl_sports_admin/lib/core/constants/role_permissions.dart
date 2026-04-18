@@ -7,6 +7,7 @@ enum AppModule {
   events,
   vouchers,
   staff,
+  customers,
 }
 
 class RolePermissions {
@@ -72,8 +73,11 @@ class RolePermissions {
   }
 
   static bool canManageStaff(String? role) {
-    final normalized = normalizeRole(role);
-    return normalized == admin || normalized == owner;
+    return isManagerLike(role);
+  }
+
+  static bool canManageCustomers(String? role) {
+    return isManagerLike(role);
   }
 
   static bool canUpdateOrderStatus(String? role) {
@@ -105,6 +109,8 @@ class RolePermissions {
           AppModule.chat,
           AppModule.events,
           AppModule.vouchers,
+          AppModule.staff,
+          AppModule.customers,
         ];
       case admin:
       case owner:
@@ -117,6 +123,7 @@ class RolePermissions {
           AppModule.events,
           AppModule.vouchers,
           AppModule.staff,
+          AppModule.customers,
         ];
       default:
         return const [AppModule.orders];

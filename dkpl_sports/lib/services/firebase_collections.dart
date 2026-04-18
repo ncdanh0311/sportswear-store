@@ -28,6 +28,7 @@ class FirebaseCollections {
   static const String addresses = 'addresses';
   static const String carts = 'carts';
   static const String cartItems = 'cart_items';
+  static const String userFavorites = 'user_favorites';
   static const String orders = 'orders';
   static const String orderItems = 'order_items';
   static const String vouchers = 'vouchers';

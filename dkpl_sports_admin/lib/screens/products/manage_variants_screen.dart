@@ -1,15 +1,20 @@
+// ignore_for_file: unused_import
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; // Thư viện để format tiền tệ
 import 'package:dkpl_sports_admin/services/product_service.dart';
 import 'package:dkpl_sports_admin/core/widgets/product_widgets.dart';
 import 'package:dkpl_sports_admin/core/widgets/base_background.dart';
 import 'package:dkpl_sports_admin/core/widgets/dkpl_card.dart';
 import 'package:dkpl_sports_admin/core/constants/app_colors.dart';
 import 'package:dkpl_sports_admin/core/constants/app_styles.dart';
+import 'package:dkpl_sports_admin/services/auth_service.dart';
+import 'package:dkpl_sports_admin/core/constants/role_permissions.dart';
 import 'edit_product_screen.dart';
 
 class ManageVariantsScreen extends StatefulWidget {
+  // Nhận vào ID và Tên sản phẩm từ màn hình trước (AddProduct hoặc Danh sách SP)
   final String productId;
   final String productName;
 
@@ -24,8 +29,15 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
   final ProductService _productService = ProductService();
 
   List<String> _colors = [];
-  int _currentImageIndex = 0;
+  int _currentImageIndex = 0; // Quản lý vị trí ảnh hiện tại trong Image Slider (PageView)
+  
+  // --- PHÂN QUYỀN (RBAC - Role Based Access Control) ---
+  // Lấy Role của user hiện tại đang đăng nhập
+  String get _role => AuthService.instance.currentUser?.roleId ?? '';
+  // Kiểm tra xem user này có quyền thêm/sửa/xóa biến thể không
+  bool get _canEditVariants => RolePermissions.canManageProducts(_role);
 
+  // Hàm format giá tiền thành chuẩn Việt Nam Đồng (VD: 100,000 đ)
   String _formatPrice(num price) {
     return NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(price);
   }
@@ -33,7 +45,7 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchConfig();
+    _fetchConfig(); // Lấy danh sách màu sắc khi mới vào màn hình
   }
 
   Future<void> _fetchConfig() async {
@@ -45,7 +57,11 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
     }
   }
 
+  /// Hàm mở Dialog (Cửa sổ bật lên) để Thêm hoặc Sửa một biến thể
+  /// - Nếu truyền `variantId` và `currentData` -> Là chế độ SỬA (Update)
+  /// - Nếu không truyền gì -> Là chế độ THÊM MỚI (Create)
   void _showVariantDialog({String? variantId, Map<String, dynamic>? currentData}) {
+    // Khởi tạo các controller, điền sẵn dữ liệu nếu đang ở chế độ Sửa
     final sizeCtrl = TextEditingController(text: currentData?['size']);
     final priceCtrl = TextEditingController(
       text: currentData != null ? currentData['price'].toString() : '',
@@ -60,6 +76,8 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
     showDialog(
       context: context,
       builder: (ctx) {
+        // 💡 Lưu ý quan trọng: Dùng StatefulBuilder để Dialog có thể tự `setState`
+        // Nếu dùng setState() bình thường của màn hình, UI trong Dialog sẽ không được cập nhật (ví dụ khi chọn Dropdown)
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
@@ -70,7 +88,7 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
               ),
               content: SingleChildScrollView(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisSize: MainAxisSize.min, // Để column co lại vừa đủ nội dung
                   children: [
                     ProductTextField(label: "Size", controller: sizeCtrl, hint: "S, M, L..."),
                     const SizedBox(height: 12),
@@ -78,10 +96,11 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                       label: "Màu sắc",
                       value: selectedColor,
                       items: _colors,
+                      // Gọi setStateDialog để UI của dropdown được update
                       onChanged: (v) => setStateDialog(() => selectedColor = v),
                       onAddPressed: () => showAddAttributeDialog(
                         context,
-                        title: "M�u",
+                        title: "Màu",
                         onSave: (val) async {
                           setStateDialog(() {
                             _colors.add(val);
@@ -90,7 +109,7 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                           await _productService.addAttributeToConfig('colors', val);
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Da them!")),
+                              const SnackBar(content: Text("Đã thêm!")),
                             );
                           }
                         },
@@ -100,13 +119,13 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                     ProductTextField(
                       label: "Giá",
                       controller: priceCtrl,
-                      keyboardType: TextInputType.number,
+                      keyboardType: TextInputType.number, // Chỉ cho nhập số
                     ),
                     const SizedBox(height: 12),
                     ProductTextField(
                       label: "Tồn kho",
                       controller: stockCtrl,
-                      keyboardType: TextInputType.number,
+                      keyboardType: TextInputType.number, // Chỉ cho nhập số
                     ),
                   ],
                 ),
@@ -118,15 +137,18 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
+                    // Validate cơ bản
                     if (sizeCtrl.text.isEmpty || priceCtrl.text.isEmpty) return;
 
+                    // Parse dữ liệu từ Text sang đúng kiểu (int, double)
                     final data = {
-                      "size": sizeCtrl.text.toUpperCase(),
+                      "size": sizeCtrl.text.toUpperCase(), // Ép size luôn viết hoa (S, M, L, XL)
                       "colorId": selectedColor ?? "",
                       "price": double.tryParse(priceCtrl.text) ?? 0,
                       "stock": int.tryParse(stockCtrl.text) ?? 0,
                     };
 
+                    // Gọi API tương ứng
                     if (isEdit) {
                       await _productService.updateVariant(widget.productId, variantId!, data);
                     } else {
@@ -134,10 +156,10 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                     }
 
                     if (mounted) {
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(isEdit ? "Đã cập nhật!" : "Đã thêm!")));
+                      Navigator.pop(ctx); // Đóng dialog
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(isEdit ? "Đã cập nhật!" : "Đã thêm!"))
+                      );
                     }
                   },
                   child: const Text(
@@ -161,31 +183,40 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
         backgroundColor: Colors.transparent,
         leading: const BackButton(color: Colors.white),
         actions: [
-          IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => EditProductScreen(productID: widget.productId)),
+          // Nút bấm sang màn hình Edit Product, chỉ hiện nếu user có quyền
+          if (_canEditVariants)
+            IconButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => EditProductScreen(productID: widget.productId)),
+              ),
+              icon: const Icon(Icons.edit_document, color: Colors.white),
             ),
-            icon: const Icon(Icons.edit_document, color: Colors.white),
-          ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showVariantDialog(),
-        backgroundColor: AppColors.accentCyan,
-        label: const Text(
-          "Thêm Biến Thể",
-          style: TextStyle(color: AppColors.primaryNavy, fontWeight: FontWeight.bold),
-        ),
-        icon: const Icon(Icons.add, color: AppColors.primaryNavy),
-      ),
+      // Nút Thêm biến thể nổi ở góc dưới, chỉ hiện nếu user có quyền
+      floatingActionButton: _canEditVariants
+          ? FloatingActionButton.extended(
+              onPressed: () => _showVariantDialog(),
+              backgroundColor: AppColors.accentCyan,
+              label: const Text(
+                "Thêm Biến Thể",
+                style: TextStyle(color: AppColors.primaryNavy, fontWeight: FontWeight.bold),
+              ),
+              icon: const Icon(Icons.add, color: AppColors.primaryNavy),
+            )
+          : null,
+      
+      // STREAM BUILDER 1: Lắng nghe sự tồn tại của Sản phẩm chính
       child: StreamBuilder<DocumentSnapshot>(
         stream: _productService.getProductStream(widget.productId),
         builder: (context, productSnapshot) {
           if (!productSnapshot.hasData) return const Center(child: CircularProgressIndicator());
-          if (!productSnapshot.data!.exists)
+          if (!productSnapshot.data!.exists) {
             return const Center(child: Text("Sản phẩm không tồn tại"));
+          }
 
+          // STREAM BUILDER 2: Lắng nghe danh sách Ảnh của sản phẩm
           return StreamBuilder<List<String>>(
             stream: _productService.getProductImagesStream(widget.productId),
             builder: (context, imageSnapshot) {
@@ -195,9 +226,11 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // --- HIỂN THỊ SLIDER ẢNH ---
                     if (images.isNotEmpty) ...[
                       SizedBox(
                         height: 300,
+                        // Dùng PageView để vuốt qua lại giữa các ảnh
                         child: PageView.builder(
                           itemCount: images.length,
                           onPageChanged: (index) => setState(() => _currentImageIndex = index),
@@ -205,6 +238,7 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                         ),
                       ),
                       const SizedBox(height: 10),
+                      // Các chấm tròn chỉ thị (Dots Indicator) bên dưới ảnh
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(
@@ -215,6 +249,7 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                             height: 8,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
+                              // Đổi màu chấm tròn hiện tại để biết đang ở ảnh số mấy
                               color: _currentImageIndex == index
                                   ? AppColors.accentCyan
                                   : Colors.white24,
@@ -223,6 +258,8 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                         ),
                       ),
                     ],
+                    
+                    // --- THÔNG TIN TÊN SẢN PHẨM ---
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
@@ -234,21 +271,27 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                         ],
                       ),
                     ),
+
+                    // STREAM BUILDER 3: Lắng nghe danh sách Biến thể (Variants + Stock) realtime
                     StreamBuilder<List<Map<String, dynamic>>>(
                       stream: _productService.getVariantsStream(widget.productId),
                       builder: (context, variantSnapshot) {
-                        if (!variantSnapshot.hasData)
+                        if (!variantSnapshot.hasData) {
                           return const Center(child: CircularProgressIndicator());
+                        }
                         final variants = variantSnapshot.data ?? [];
 
-                        if (variants.isEmpty)
+                        // Nếu chưa có biến thể nào
+                        if (variants.isEmpty) {
                           return const Center(
                             child: Text("Chưa có biến thể", style: TextStyle(color: Colors.white54)),
                           );
+                        }
 
+                        // Hiển thị list biến thể
                         return ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
+                          shrinkWrap: true, // Ép ListView ôm sát nội dung để có thể nằm trong SingleChildScrollView
+                          physics: const NeverScrollableScrollPhysics(), // Tắt cuộn của ListView, nhường cuộn cho SingleChildScrollView bọc ngoài
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: variants.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -265,6 +308,7 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                               ),
                               child: Row(
                                 children: [
+                                  // Box hiển thị Size
                                   Container(
                                     width: 50,
                                     height: 50,
@@ -283,6 +327,7 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
+                                  // Hiển thị Màu sắc và Số lượng tồn kho
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,6 +346,7 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                                       ],
                                     ),
                                   ),
+                                  // Hiển thị Giá tiền (đã format)
                                   Text(
                                     _formatPrice(vData['price'] ?? 0),
                                     style: const TextStyle(
@@ -308,16 +354,22 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                                       color: AppColors.accentCyan,
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, color: Colors.orange, size: 20),
-                                    onPressed: () =>
-                                        _showVariantDialog(variantId: vId, currentData: vData),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: AppColors.error, size: 20),
-                                    onPressed: () =>
-                                        _productService.deleteVariant(widget.productId, vId),
-                                  ),
+                                  
+                                  // Nút Sửa biến thể (ẩn nếu không có quyền)
+                                  if (_canEditVariants)
+                                    IconButton(
+                                      icon: const Icon(Icons.edit, color: Colors.orange, size: 20),
+                                      onPressed: () =>
+                                          _showVariantDialog(variantId: vId, currentData: vData),
+                                    ),
+                                    
+                                  // Nút Xóa biến thể (ẩn nếu không có quyền)
+                                  if (_canEditVariants)
+                                    IconButton(
+                                      icon: const Icon(Icons.delete, color: AppColors.error, size: 20),
+                                      onPressed: () =>
+                                          _productService.deleteVariant(widget.productId, vId),
+                                    ),
                                 ],
                               ),
                             );
@@ -325,7 +377,7 @@ class _ManageVariantsScreenState extends State<ManageVariantsScreen> {
                         );
                       },
                     ),
-                    const SizedBox(height: 80),
+                    const SizedBox(height: 80), // Padding trống để nội dung không bị nút FloatingActionBox đè lên
                   ],
                 ),
               );

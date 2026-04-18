@@ -1,22 +1,18 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'package:dkpl_sports_admin/services/auth_service.dart';
 import 'package:dkpl_sports_admin/core/constants/app_colors.dart';
 import 'package:dkpl_sports_admin/core/constants/role_permissions.dart';
-
-// --- IMPORTS CÁC MÀN HÌNH CHỨC NĂNG CỦA TỪNG TAB ---
 import 'package:dkpl_sports_admin/screens/products/product_list_screen.dart';
 import 'package:dkpl_sports_admin/screens/events/list_event_screen.dart';
 import 'package:dkpl_sports_admin/screens/vouchers/voucher_list_screen.dart';
 import 'package:dkpl_sports_admin/screens/dashboard/dashboard_screen.dart';
 import 'package:dkpl_sports_admin/screens/chat/chat_list_screen.dart';
-import 'package:dkpl_sports_admin/screens/inventory/inventory_screen.dart'; // Đã thay thế thành InventoryScreen kết nối Firebase
+import 'package:dkpl_sports_admin/screens/inventory/inventory_screen.dart';
 import 'package:dkpl_sports_admin/screens/orders/duyetdon.dart';
 import 'package:dkpl_sports_admin/screens/staff/staff_list_screen.dart';
+import 'package:dkpl_sports_admin/screens/customers/customer_list_screen.dart';
 
-// =========================================================================
-// MÀN HÌNH ĐIỀU HƯỚNG CHÍNH (HUB) - TỰ ĐỘNG PHÂN TAB THEO ROLE
-// =========================================================================
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({Key? key}) : super(key: key);
 
@@ -44,14 +40,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     _pages = [];
     _navItems = [];
 
-    // --- KHỞI TẠO CÁC MODULE TAB ---
+    // --- KHá»I Táº O CĂC MODULE TAB ---
     final tabSanPham = const ProductListScreen();
     final itemSanPham = const BottomNavigationBarItem(
       icon: Icon(Icons.shopping_bag_outlined),
       label: 'Sản phẩm',
     );
 
-    // Đã thay đổi ở đây: Dùng InventoryScreen
+    // ÄĂ£ thay Ä‘á»•i á»Ÿ Ä‘Ă¢y: DĂ¹ng InventoryScreen
     final tabKho = const InventoryScreen();
     final itemKho = const BottomNavigationBarItem(
       icon: Icon(Icons.inventory_2_outlined),
@@ -61,13 +57,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final tabChat = const ChatListScreen();
     final itemChat = BottomNavigationBarItem(
       icon: const Icon(Icons.chat_bubble_outline_rounded),
-      label: 'Chat',
+      label: 'CSKH',
     );
 
     final tabDonHang = const DuyetDonScreen();
     final itemDonHang = const BottomNavigationBarItem(
       icon: Icon(Icons.receipt_long_outlined),
-      label: 'Đơn hàng',
+      label: 'Đơn Hàng',
     );
 
     final tabEvent = const ListEventScreen();
@@ -85,16 +81,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final tabThongKe = const DashboardScreen();
     final itemThongKe = const BottomNavigationBarItem(
       icon: Icon(Icons.bar_chart_rounded),
-      label: 'Thống kê',
+      label: 'Thống Kê',
     );
 
     final tabNhanVien = const StaffListScreen();
+
+    final tabKhachHang = const CustomerListScreen();
+    final itemKhachHang = const BottomNavigationBarItem(
+      icon: Icon(Icons.group_outlined),
+      label: 'Khách hàng',
+    );
     final itemNhanVien = const BottomNavigationBarItem(
       icon: Icon(Icons.manage_accounts_outlined),
-      label: 'Nhân sự',
+      label: 'Nhân Viên',
     );
 
-    // --- PHÂN QUYỀN VÀ LẮP RÁP ---
+    // --- PHĂ‚N QUYá»€N VĂ€ Láº®P RĂP ---
     for (final module in modules) {
       switch (module) {
         case AppModule.dashboard:
@@ -128,6 +130,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         case AppModule.staff:
           _pages.add(tabNhanVien);
           _navItems.add(itemNhanVien);
+          break;
+        case AppModule.customers:
+          _pages.add(tabKhachHang);
+          _navItems.add(itemKhachHang);
           break;
       }
     }
@@ -177,4 +183,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 }
+
+
+
+
 

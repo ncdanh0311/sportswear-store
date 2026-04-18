@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../../models/model_utils.dart';
 
 class FilterPage extends StatefulWidget {
   const FilterPage({super.key});
@@ -60,12 +61,18 @@ class _FilterPageState extends State<FilterPage> {
 
             const Text("Khoảng giá (VNĐ)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text("${priceRange.start.toInt()}₫  -  ${priceRange.end.toInt()}₫", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryBlue)),
+            Text(
+              "${ModelUtils.formatVnd(priceRange.start)}  -  ${ModelUtils.formatVnd(priceRange.end)}",
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
+            ),
             RangeSlider(
               values: priceRange,
               min: 0, max: 3000000, divisions: 100,
               activeColor: AppColors.primaryBlue, inactiveColor: Colors.grey.shade300,
-              labels: RangeLabels("${priceRange.start.toInt()}₫", "${priceRange.end.toInt()}₫"),
+              labels: RangeLabels(
+                ModelUtils.formatVnd(priceRange.start),
+                ModelUtils.formatVnd(priceRange.end),
+              ),
               onChanged: (value) => setState(() => priceRange = value),
             ),
             const SizedBox(height: 40),

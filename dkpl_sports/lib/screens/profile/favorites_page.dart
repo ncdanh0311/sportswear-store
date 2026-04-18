@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/product_image.dart';
 import '../../core/user_session.dart';
+import '../../models/model_utils.dart';
 import '../../models/product_model.dart';
 import '../../services/local_favorites_service.dart';
 import '../../services/product_repository.dart';
@@ -126,10 +127,7 @@ class _FavoriteCard extends StatelessWidget {
   final ProductModel product;
   final VoidCallback onRemove;
 
-  const _FavoriteCard({
-    required this.product,
-    required this.onRemove,
-  });
+  const _FavoriteCard({required this.product, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +166,10 @@ class _FavoriteCard extends StatelessWidget {
                 child: Center(
                   child: Padding(
                     padding: const EdgeInsets.all(8),
-                    child: ProductImage(src: product.image, fit: BoxFit.contain),
+                    child: ProductImage(
+                      src: product.image,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ),
@@ -197,7 +198,7 @@ class _FavoriteCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "\$${product.price.toStringAsFixed(2)}",
+                    ModelUtils.formatVnd(product.price),
                     style: const TextStyle(
                       color: AppColors.primaryBlue,
                       fontWeight: FontWeight.bold,
@@ -217,6 +218,3 @@ class _FavoriteCard extends StatelessWidget {
     );
   }
 }
-
-
-
